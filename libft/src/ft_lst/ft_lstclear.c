@@ -1,22 +1,28 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   minishell.h                                        :+:      :+:    :+:   */
+/*   ft_lstclear.c                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
+/*   By: rhiguita <rhiguita@student.42madrid>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/20 13:39:22 by rhiguita          #+#    #+#             */
-/*   Updated: 2025/06/20 14:58:16 by rhiguita         ###   ########.fr       */
+/*   Created: 2025/01/27 20:00:15 by rhiguita          #+#    #+#             */
+/*   Updated: 2025/01/27 20:00:18 by rhiguita         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef MINISHELL_H
-# define MINISHELL_H
+#include "../../inc/libft.h"
 
-# include "../libft/inc/libft.h"
-# include "../libft/inc/ft_printf.h"
-# include "../libft/inc/get_next_line.h"
+void	ft_lstclear(t_list **lst, void (*del)(void*))
+{
+	t_list	*next_node;
 
-# include <errno.h>
-
-#endif
+	if (!*lst)
+		return ;
+	while (*lst)
+	{
+		next_node = (*lst)->next;
+		ft_lstdelone(*lst, del);
+		*lst = next_node;
+	}
+	*lst = NULL;
+}

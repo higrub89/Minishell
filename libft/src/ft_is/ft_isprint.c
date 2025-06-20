@@ -1,22 +1,20 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   minishell.h                                        :+:      :+:    :+:   */
+/*   ft_isprint.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
+/*   By: rhiguita <rhiguita@student.42madrid>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/20 13:39:22 by rhiguita          #+#    #+#             */
-/*   Updated: 2025/06/20 14:58:16 by rhiguita         ###   ########.fr       */
+/*   Created: 2025/01/27 19:59:24 by rhiguita          #+#    #+#             */
+/*   Updated: 2025/01/27 19:59:26 by rhiguita         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef MINISHELL_H
-# define MINISHELL_H
+#include "../../inc/libft.h"
 
-# include "../libft/inc/libft.h"
-# include "../libft/inc/ft_printf.h"
-# include "../libft/inc/get_next_line.h"
-
-# include <errno.h>
-
-#endif
+int	ft_isprint(int c)
+{
+	if (c >= 32 && c <= 126)
+		return (1);
+	return (0);
+}

@@ -1,22 +1,21 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   minishell.h                                        :+:      :+:    :+:   */
+/*   ft_handle_unsigned.c                               :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
+/*   By: rhiguita <rhiguita@student.42madrid>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/20 13:39:22 by rhiguita          #+#    #+#             */
-/*   Updated: 2025/06/20 14:58:16 by rhiguita         ###   ########.fr       */
+/*   Created: 2025/01/27 20:05:45 by rhiguita          #+#    #+#             */
+/*   Updated: 2025/01/27 20:05:48 by rhiguita         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef MINISHELL_H
-# define MINISHELL_H
+#include "../../inc/ft_printf.h"
 
-# include "../libft/inc/libft.h"
-# include "../libft/inc/ft_printf.h"
-# include "../libft/inc/get_next_line.h"
+int	ft_handle_unsigned(va_list ap)
+{
+	unsigned int	n;
 
-# include <errno.h>
-
-#endif
+	n = va_arg(ap, unsigned int);
+	return (ft_putnbr_base(n, "0123456789"));
+}
