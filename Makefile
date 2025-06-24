@@ -7,8 +7,9 @@ SRC_DIR				= srcs/
 OBJ_DIR				= obj/
 
 # Compiler and CFlags
-CC					= gcc
-CFLAGS				= -Wall -Werror -Wextra -g -I$(INC)
+CC					= cc
+CFLAGS			= -Wall -Werror -Wextra -g -I$(INC)
+LDFLAGS			= -lreadline
 RM					= rm -f
 
 # Source Files
@@ -30,7 +31,7 @@ $(LIBFT):
 all: 				$(NAME)
 
 $(NAME): 			$(OBJ) $(LIBFT)
-					@$(CC) $(CFLAGS) $(INC) $(OBJ) $(LIBFT) -o $(NAME) 2>&1 | lolcat
+					@$(CC) $(CFLAGS) $(INC) $(OBJ) $(LIBFT) $(LDFLAGS) -o $(NAME) 2>&1 | lolcat
 
 # Compile object files from source files
 $(OBJ_DIR)%.o:		$(SRC_DIR)%.c 

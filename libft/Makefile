@@ -7,7 +7,7 @@ SRC_DIR			= src/
 OBJ_DIR			= obj/
 
 # Compielr and Flags
-CC				= gcc
+CC				= cc
 CFLAGS			= -Wall -Wextra -Werror -I
 RM				= rm -f
 AR				= ar rcs

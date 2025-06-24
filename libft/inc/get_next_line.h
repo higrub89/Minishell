@@ -26,5 +26,6 @@ char	*process_line(char **stash);
 char	*read_from_fd(int fd);
 char	*get_next_line_helper(char **stash, int fd);
 char	*get_next_line_bonus(int fd);
+char	*get_next_line(int fd);
 
 #endif

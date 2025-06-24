@@ -18,5 +18,9 @@
 # include "../libft/inc/get_next_line.h"
 
 # include <errno.h>
+# include <readline/readline.h>
+# include <readline/history.h>
 
+
+int main(int argc, char **argv, char **env);
 #endif
