@@ -22,7 +22,7 @@ t_token *create_new_token(char *value, t_token_type type)
   }
 
   new_token->value = ft_strdup(value);
-  if (!new_token)
+  if (!new_token->value)
   {
     perror("ft_strdup failed in create_new_token");
     exit(EXIT_FAILURE);
@@ -35,7 +35,7 @@ t_token *create_new_token(char *value, t_token_type type)
 t_token *lexer(char *input_line)
 {
   t_token *head = NULL;     //cabeza de la lista de tokens.
-  t_token *current = NULL;  //Puntero para añadir tokens al final de la lista.
+  //t_token *current = NULL;  //Puntero para añadir tokens al final de la lista.
   int i = 0;
 
   if(!input_line)
@@ -49,4 +49,30 @@ t_token *lexer(char *input_line)
       break ;
   }
   return (head);
+}
+
+void add_token_to_list(t_token **head, t_token **current, t_token *new_token)
+{
+  if (!*head)
+  {
+    *head = new_token;
+    *current = new_token;
+  }
+  else
+  {
+    (*current)->next = new_token;
+    *current = new_token;
+  }
+}
+
+void free_tokens(t_token *head)
+{
+  t_token *tmp;
+  while (head)
+  {
+    tmp = head;
+    head = head->next;
+    free(tmp->value);
+    free(tmp);
+  }
 }

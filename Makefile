@@ -13,7 +13,9 @@ LDFLAGS			= -lreadline
 RM					= rm -f
 
 # Source Files
-COMMANDS_DIR		=	srcs/pruebas.c 
+COMMANDS_DIR		=	srcs/pruebas.c \
+									srcs/lexer.c 
+									
 
 # Concatenate all source files
 SRCS 				= $(COMMANDS_DIR) 
