@@ -81,10 +81,41 @@ t_token *lexer(char *input_line)
     else
     {
       int start = i; //Guardo el inicio del token actual.
-      if(input_line[i] == '\'')
+      if(input_line[i] == '\'' || input_line[i] == '\"')
       {
-        
+        char quote_char = input_line[i];
+        i++; // avanzo una posición para saltar
+        while(input_line[i] && input_line[i] != quote_char)
+          i++;
+        if (input_line[i] == quote_char) //Si encuentra la comilla de cierre
+          i++; // saltar la comilla.
+        else
+        {
+          fprintf(stderr, "Syntax error, unclosed quotation mark\n");
+          free_tokens(head);
+          return (NULL);
+        }
       }
+      else // Es una palabra sin comillas.
+      {
+        while(input_line[i] && input_line[i] != ' ' && input_line[i] != '\t' 
+          && input_line[i] != '<' && input_line[i] != '>'  && input_line[i] != '|')
+        {
+          i++;
+        }
+      }
+      int token_len = i - start;
+      char *word_value = (char *)malloc(token_len + 1);
+      if (!word_value)
+      {
+        perror("malloc failed for word_value");
+        free_tokens(head);
+        return (NULL);
+      }
+      ft_strncpy(word_value, &input_line[start], token_len);
+      word_value[token_len] = '\0';
+      add_token_to_list(&head, &current, create_new_token(word_value, WORD));
+      free(word_value);
     }
   }
   return (head);
