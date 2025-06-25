@@ -35,7 +35,7 @@ t_token *create_new_token(char *value, t_token_type type)
 t_token *lexer(char *input_line)
 {
   t_token *head = NULL;     //cabeza de la lista de tokens.
-  //t_token *current = NULL;  //Puntero para añadir tokens al final de la lista.
+  t_token *current = NULL;  //Puntero para añadir tokens al final de la lista.
   int i = 0;
 
   if(!input_line)
@@ -47,6 +47,45 @@ t_token *lexer(char *input_line)
       i++;
     if (!input_line[i]) //Si terminamos de leer la linea despues de espacios.
       break ;
+    if(input_line[i] == '<')
+    {
+      if (input_line[i+1] == '<')
+      {
+        add_token_to_list(&head, &current, create_new_token("<<", HEREDOC));
+        i += 2; //avanzo dos posiciones.
+      }
+      else
+      {
+        add_token_to_list(&head, &current, create_new_token("<", REDIR_IN));
+        i += 1; //avanzo una posición.
+      }
+    }
+    else if(input_line[i] == '>')
+    {
+      if (input_line[i+1] == '>')
+      {
+        add_token_to_list(&head, &current, create_new_token(">>", APPEND_OUT));
+        i += 2;
+      }
+      else
+      {
+        add_token_to_list(&head, &current, create_new_token(">", REDIR_OUT));
+        i += 1;
+      }
+    }
+    else if(input_line[i] == '|')
+    {
+      add_token_to_list(&head, &current, create_new_token("|", PIPE));
+      i += 1;
+    }
+    else
+    {
+      int start = i; //Guardo el inicio del token actual.
+      if(input_line[i] == '\'')
+      {
+        
+      }
+    }
   }
   return (head);
 }
