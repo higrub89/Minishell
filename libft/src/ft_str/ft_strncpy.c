@@ -14,29 +14,26 @@
 
 size_t	ft_strncpy(char *dst, const char *src, size_t dstsize)
 {
-	size_t		srcsize;
-	const char	*src_ptr;
-	char		*dst_ptr;
-	size_t		p;
+	size_t		len;
+	size_t		i;
 
-	srcsize = 0;
-	src_ptr = src;
-	dst_ptr = dst;
-	while (*src_ptr != '\0')
+	len = 0;
+	while (src[len] != '\0')
+		len++;
+	if (dstsize == 0)
+		return (len);
+	if (dst == NULL)
+		return (len);
+	i = 0;
+	while (i < dstsize && src[i] != '\0')
 	{
-		srcsize++;
-		src_ptr++;
+		dst[i] = src[i];
+		i++;
 	}
-	if (dstsize == 0 || dst == NULL)
-		return (srcsize);
-	p = 0;
-	while (p < (dstsize - 1) && *src != '\0')
+	while (i < dstsize)
 	{
-		*dst_ptr = *src;
-		dst_ptr++;
-		src++;
-		p++;
+		dst[i] = '\0';
+		i++;
 	}
-	*dst_ptr = '\0';
-	return (srcsize);
+	return (len);
 }
