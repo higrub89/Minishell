@@ -8,13 +8,13 @@ OBJ_DIR				= obj/
 
 # Compiler and CFlags
 CC					= cc
-CFLAGS			= -Wall -Werror -Wextra -g -I$(INC)
-LDFLAGS			= -lreadline
+CFLAGS				= -Wall -Werror -Wextra -g -I$(INC)
+LDFLAGS				= -lreadline
 RM					= rm -f
 
 # Source Files
 COMMANDS_DIR		=	srcs/pruebas.c \
-									srcs/lexer.c 
+						srcs/lexer.c 
 									
 
 # Concatenate all source files
