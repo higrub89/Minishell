@@ -8,7 +8,7 @@ int main(int argc, char **argv, char **env)
    char *line;
    while(1)
    {
-      line = readline("minishell> ");
+      line = readline("minishell$ ");
 
       if (line == NULL)
       {

@@ -95,7 +95,8 @@ t_token *lexer(char *input_line)
             i++;
           else
           {
-            fprintf(stderr, "Syntax error, unclosed quotation mark\n");
+            // Aquí debo manejar el caso cuando falta la comilla de cierre..
+            fprintf(stderr, "Debes manejar Este caso, llamado 'Prom string two PS2'\n");
             free_tokens(head);
             return (NULL);
           }
