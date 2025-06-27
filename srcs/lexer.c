@@ -81,6 +81,31 @@ t_token *lexer(char *input_line)
     else
     {
       int start = i; //Guardo el inicio del token actual.
+
+      while(input_line[i] && input_line[i] != ' ' && input_line[i] != '\t' 
+          && input_line[i] != '<' && input_line[i] != '>'  && input_line[i] != '|')
+      {
+        if (input_line[i] == '\'' || input_line[i] == '\"')
+        {
+          char quote_char = input_line[i];
+          i++;
+          while (input_line[i] && input_line[i] !=  quote_char)
+            i++;
+          if (input_line[i] == quote_char)
+            i++;
+          else
+          {
+            fprintf(stderr, "Syntax error, unclosed quotation mark\n");
+            free_tokens(head);
+            return (NULL);
+          }
+        }
+        else
+        {
+          i++; // Es un caracter sin comillas que forma parte de la palabra!.
+        }
+      }
+      /*
       if(input_line[i] == '\'' || input_line[i] == '\"')
       {
         char quote_char = input_line[i];
@@ -103,7 +128,7 @@ t_token *lexer(char *input_line)
         {
           i++;
         }
-      }
+      }*/
       int token_len = i - start;
       char *word_value = (char *)malloc(token_len + 1);
       if (!word_value)
