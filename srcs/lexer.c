@@ -106,30 +106,6 @@ t_token *lexer(char *input_line)
           i++; // Es un caracter sin comillas que forma parte de la palabra!.
         }
       }
-      /*
-      if(input_line[i] == '\'' || input_line[i] == '\"')
-      {
-        char quote_char = input_line[i];
-        i++; // avanzo una posición para saltar
-        while(input_line[i] && input_line[i] != quote_char)
-          i++;
-        if (input_line[i] == quote_char) //Si encuentra la comilla de cierre
-          i++; // saltar la comilla.
-        else
-        {
-          fprintf(stderr, "Syntax error, unclosed quotation mark\n");
-          free_tokens(head);
-          return (NULL);
-        }
-      }
-      else // Es una palabra sin comillas.
-      {
-        while(input_line[i] && input_line[i] != ' ' && input_line[i] != '\t' 
-          && input_line[i] != '<' && input_line[i] != '>'  && input_line[i] != '|')
-        {
-          i++;
-        }
-      }*/
       int token_len = i - start;
       char *word_value = (char *)malloc(token_len + 1);
       if (!word_value)
