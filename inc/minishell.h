@@ -42,6 +42,35 @@ typedef struct s_token
   struct s_token *next;
 } t_token;
 
+// Parser:
+
+// Estructura para los tipos de redirección.
+typedef enum s_redir_type
+{
+  REDIR_IN,
+  REDIR_OUT,
+  REDIR_APPEND,
+  REDIR_HEREDOC
+} t_redir_type;
+
+// Estructura para una única redirección.
+typedef struct s_redirection
+{
+  t_redir_type type;
+  char    *file;
+  struct s_redirection *next;
+} t_redirection;
+
+// Estructura para un comando completo.
+typedef struct s_command
+{
+  char    **args;
+  t_redirection *redirs;
+  struct s_command *next;
+} t_command;
+
+
+
 int main(int argc, char **argv, char **env);
 
 //lexer.c
