@@ -1,6 +1,6 @@
-# Standard
 NAME				= minishell
 
+# Directorios de includes y fuentes.
 LIBFT				= ./libft/libft.a
 INC					= -Iinc/
 SRC_DIR				= srcs/
