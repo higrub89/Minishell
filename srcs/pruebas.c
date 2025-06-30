@@ -1,38 +1,38 @@
 #include "../inc/minishell.h"
 
-int main(int argc, char **argv, char **env)
+int main(void)
 {
-   (void)argc;
-   (void)argv;
-   (void)env;
-   char *line;
+   char *input_line;
+   t_token *tokens;
+   t_command *commands;
+
    while(1)
    {
-      line = readline("minishell> ");
-
-      if (line == NULL)
+      input_line = readline("minishell> ");
+      if (!input_line)
       {
          printf("exit\n");
          break;
       }
-      if (strlen(line) > 0)
+      if (*input_line)
+         add_history(input_line);
+      tokens = lexer(input_line);
+      if (!tokens)
       {
-         add_history(line);
-         t_token *tokens = lexer(line);
-
-         if (tokens)
-         {
-            t_token *current_token = tokens;
-            printf("Tokens generados\n");
-            while(current_token)
-            {
-               printf("Value: '%s', You type: '%d'\n", current_token->value, current_token->type);
-               current_token = current_token->next;
-            }
-            free_tokens(tokens);
-         }
+         free(input_line);
+         continue;
       }
-      free(line);
+      commands = parse_input(tokens);
+      if (!commands)
+      {
+         free_tokens(tokens);
+         free(input_line);
+         continue;
+      }
+         // Executor....
+      free_commands(commands);
+      free_tokens(tokens);
+      free(input_line);
    }
    return (0);
 }

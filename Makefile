@@ -14,7 +14,9 @@ RM					= rm -f
 
 # Source Files
 COMMANDS_DIR		=	srcs/pruebas.c \
-						srcs/lexer.c 
+									srcs/lexer.c \
+									srcs/parser.c \
+									srcs/utils_command.c 
 									
 
 # Concatenate all source files
