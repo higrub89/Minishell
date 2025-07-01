@@ -16,13 +16,13 @@ t_command *create_command_node(void)
 }
 
 //Función para añadir un argumento string al array args de un t_command.
-void add_arg_to_command(t_command *cmd, char *arg_value)
+int add_arg_to_command(t_command *cmd, char *arg_value)
 {
   int current_arg_count;
   size_t old_total_bytes;
   size_t new_total_bytes;
   char **tem_args;
-  char **new_str;
+  char *new_arg_str;
 
   if (!cmd || !arg_value)
     return (1);
@@ -42,9 +42,10 @@ void add_arg_to_command(t_command *cmd, char *arg_value)
     perror("minishell: ft_realloc failed for command args");
     return (1);
   }
-  if (!new_str)
+  new_arg_str = ft_strdup(arg_value);
+  if (!new_arg_str)
     return (1);
-  tem_args[current_arg_count] = new_str;
+  tem_args[current_arg_count] = new_arg_str;
   tem_args[current_arg_count + 1] = NULL;
   cmd->args = tem_args;
   return (0);
