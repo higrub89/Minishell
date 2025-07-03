@@ -13,7 +13,7 @@ LDFLAGS				= -lreadline
 RM					= rm -f
 
 # Source Files
-COMMANDS_DIR		=	srcs/pruebas.c \
+COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/lexer.c \
 									srcs/parser.c \
 									srcs/utils_command.c 

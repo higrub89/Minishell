@@ -29,6 +29,6 @@
 # include <readline/history.h>
 
 
-int main(int argc, char **argv, char **env);
+int main(void);
 
 #endif
