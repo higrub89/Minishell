@@ -9,6 +9,7 @@ t_command *parse_input(t_token *token_list)
   t_command *temp;
   t_redirection *new_redir;
   t_token *current_token = token_list;
+  t_redir_type redir_enum_type;  // -- Declaración de la variable de mapeo.
 
   if (!token_list)
     return (NULL);
@@ -53,7 +54,23 @@ t_command *parse_input(t_token *token_list)
         free_commands(head_cmd);
         return (NULL);
       }
-      new_redir = create_redirection_node(current_token->type, current_token->next->value);
+
+      if (current_token->type == IN)
+        redir_enum_type = REDIR_IN;
+      else if (current_token->type == OUT)
+        redir_enum_type = REDIR_OUT;
+      else if (current_token->type == APPE_OUT)
+        redir_enum_type = REDIR_APPEND;
+      else if (current_token->type == HEREDOC)
+        redir_enum_type = REDIR_HEREDOC;
+      else
+      {
+        fprintf(stderr, "minishell: Parser error: unknow redirection type\n");
+        free_tokens(token_list);
+        free_commands(head_cmd);
+        return (NULL);
+      }
+      new_redir = create_redirection_node(redir_enum_type, current_token->next->value);
       if (!new_redir)
       {
         free_tokens(token_list);

@@ -13,7 +13,7 @@
 
 #include "../inc/lexer.h"
 #include "../inc/token.h"
-#include "libft/inc/libft.h"
+#include "../libft/inc/libft.h"
 
 t_token *create_new_token(char *value, t_token_type type)
 {
