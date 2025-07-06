@@ -22,6 +22,7 @@ char *find_command_path(char *cmd_name)
   {
     if (ft_strncmp(environ[i], "PATH=", 5) == 0)
     {
+      
       path_env = environ[i] + 5; // obtener la cadena después de "PATH="
       break;
     }
@@ -44,6 +45,24 @@ char *find_command_path(char *cmd_name)
       free(paths);
       return (NULL);
     }
-    ft_strcp
+    ft_strcpy(full_path, paths);
+    ft_strcat(full_path, "/");
+    ft_strcat(full_path, cmd_name);
+
+    if (access(full_path, F_OK | X_OK) == 0)
+    {
+      i = 0;
+      while (paths[i])
+        free(paths[i++]);
+      free(paths);
+      return (full_path);
+    }
+    free(full_path);
+    i++;
   }
+  i = 0;
+  while (paths[i])
+    free(paths[i++]);
+  free(paths);
+  return (NULL);
 }

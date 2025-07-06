@@ -1,5 +1,5 @@
 #include "../inc/parser.h"
-#include "../inc/libft.h"
+#include "../libft/inc/ft_printf.h"
 
 //Función principal del parser.
 t_command *parse_input(t_token *token_list)
@@ -43,7 +43,7 @@ t_command *parse_input(t_token *token_list)
       }
       current_token = current_token->next; 
     }
-    else if (current_token->type >= REDIR_IN && current_token->type <= APPEND_OUT) // Es una redirección
+    else if (current_token->type >= IN && current_token->type <= APPE_OUT) // Es una redirección
     {
       if (!current_token->next || current_token->next->type != WORD)
       {

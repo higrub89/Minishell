@@ -8,9 +8,9 @@ typedef enum s_token_type
 {
   WORD,       //Una palabra normal.
   PIPE,       //operador |
-  REDIR_IN,   //operador <
-  REDIR_OUT,  //operador >
-  APPEND_OUT, //operador >>
+  IN,   //operador <
+  OUT,  //operador >
+  APPE_OUT, //operador >>
   HEREDOC,    //operador <<
 
 } t_token_type;

@@ -10,9 +10,10 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../inc/libft.h"
+
 #include "../inc/lexer.h"
 #include "../inc/token.h"
+#include "libft/inc/libft.h"
 
 t_token *create_new_token(char *value, t_token_type type)
 {
@@ -58,7 +59,7 @@ t_token *lexer(char *input_line)
       }
       else
       {
-        add_token_to_list(&head, &current, create_new_token("<", REDIR_IN));
+        add_token_to_list(&head, &current, create_new_token("<", IN));
         i += 1; //avanzo una posición.
       }
     }
@@ -66,12 +67,12 @@ t_token *lexer(char *input_line)
     {
       if (input_line[i+1] == '>')
       {
-        add_token_to_list(&head, &current, create_new_token(">>", APPEND_OUT));
+        add_token_to_list(&head, &current, create_new_token(">>", APPE_OUT));
         i += 2;
       }
       else
       {
-        add_token_to_list(&head, &current, create_new_token(">", REDIR_OUT));
+        add_token_to_list(&head, &current, create_new_token(">", OUT));
         i += 1;
       }
     }

@@ -1,3 +1,15 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   ft_realloc.c                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: rhiguita <rhiguita@student.42madrid>       +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/01/27 20:02:46 by rhiguita          #+#    #+#             */
+/*   Updated: 2025/01/27 20:02:49 by rhiguita         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../../inc/libft.h"
 
 void	*ft_realloc(void *ptr, size_t old_size, size_t new_size)
@@ -25,6 +37,6 @@ void	*ft_realloc(void *ptr, size_t old_size, size_t new_size)
 	return (new_ptr);
 }
 
-// Función Realloc,
+/*Función Realloc,
 	sirve para agregar más tamaña de memoria a los bloques de memoria ya asignados. El proposito de realloc en C es expandir los bloques de memoria actuales dejando el contenido original como está. Tambien ayuda a reducir el tamaño de la memoria previamente asiganda mediante funciones malloc o calloc. Realloc(reasignación de memoria). Le he asignado un argumento adicional (old_size),
-	previamente debemos asignar el size del *ptr.
+	previamente debemos asignar el size del *ptr.*/

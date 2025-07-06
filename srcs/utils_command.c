@@ -1,5 +1,5 @@
 #include "../inc/command.h"
-#include "../inc/libft.h"
+#include "libft/inc/libft.h"
 
 // Función para crear e inicializar un nuevo nodo.
 t_command *create_command_node(void)

@@ -1,7 +1,7 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   ft_strcpy.c                                        :+:      :+:    :+:   */
+/*   ft_strcat.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rhiguita <rhiguita@student.42madrid>       +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
@@ -12,16 +12,19 @@
 
 #include "../../inc/libft.h"
 
-char	*ft_strcpy(char *s1, char *s2)
+char	*ft_strcat(char *des, const char *src)
 {
-	int i;
+	char *ptr;
 
-	i = 0;
-	while (s2[i] != '\0')
+	ptr = des;
+	while (*ptr != '\0')
+		ptr++;
+	while (*src != '\0')
 	{
-		s1[i] = s2[i];
-		i++;
+		*ptr = *src;
+		ptr++;
+		src++;
 	}
-	s1[i] = '\0';
-	return (s1);
+	*ptr = '\0';
+	return (des);
 }

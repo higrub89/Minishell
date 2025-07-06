@@ -6,10 +6,10 @@
 //estructura Enum para los 
 typedef enum s_redir_type
 {
-  REDIR_IN,
-  REDIR_OUT,
-  REDIR_APPEND,
-  REDIR_HEREDOC
+  REDIR_IN,     // <
+  REDIR_OUT,    // >
+  REDIR_APPEND, // >>
+  REDIR_HEREDOC // <<
 } t_redir_type;
 
 // Estructura para una única redirección.
