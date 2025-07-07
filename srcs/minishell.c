@@ -5,6 +5,7 @@ int main(void)
    char *input_line;
    t_token *tokens;
    t_command *commands;
+   int exit_status = 0;
 
    while(1)
    {
@@ -25,10 +26,9 @@ int main(void)
       commands = parse_input(tokens);
       if (!commands)
       {
-         free_tokens(tokens);
-         free(input_line);
          continue;
       }
+      (void)exit_status;
          // Executor....
       free_commands(commands);
       free_tokens(tokens);
