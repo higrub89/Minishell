@@ -44,8 +44,22 @@ t_command *parse_input(t_token *token_list)
       }
       current_token = current_token->next; 
     }
-    else if (current_token->type >= IN && current_token->type <= APPE_OUT) // Es una redirección
+    else if (current_token->type >= IN && current_token->type <= HEREDOC) // Es una redirección
     {
+      if (!current_token->next ||
+          (current_token->next->type != WORD &&
+            current_token->next->type != IN &&
+            current_token->next->type != OUT &&
+            current_token->next->type != APPE_OUT &&
+            current_token->next->type != HEREDOC &&
+            current_token->next->type != PIPE))
+      {
+         fprintf(stderr, "minishell: Syntax error near unexpected token '%s'\n",
+          current_token->next ? current_token->next->value : "newline");
+        free_tokens(token_list);
+        free_commands(head_cmd);
+        return (NULL);
+      }
       if (!current_token->next || current_token->next->type != WORD)
       {
         fprintf(stderr, "minishell: Syntax error near unexpected token '%s'\n",
@@ -92,17 +106,17 @@ t_command *parse_input(t_token *token_list)
       }
       if (!current_token->next)
       {
-        fprintf(stderr, "minishell: Syntax error near expected token '%s'\n", current_token->value);
+        fprintf(stderr, "minishell: Syntax error near unexpected token 'newline'\n");
         free_tokens(token_list);
         free_commands(head_cmd);
         return (NULL);
       }
-      current_cmd = NULL;
+      current_cmd = NULL; // Pipe siempre indica el inicio de un nuevo comando.
       current_token = current_token->next;
     }
     else
     {
-      fprintf(stderr, "minishell: parser error: unexpected token type %d\n", current_token->type);
+      fprintf(stderr, "minishell: parser error: unexpected token type '%s'\n", current_token->value);
       free_tokens(token_list);
       free_commands(head_cmd);
       return(NULL);

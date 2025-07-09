@@ -99,7 +99,7 @@ t_token *lexer(char *input_line)
           else
           {
             // Aquí debo manejar el caso cuando falta la comilla de cierre..
-            fprintf(stderr, "Debes manejar Este caso, llamado 'Prom string two PS2'\n");
+            fprintf(stderr, "minishell: Syntax error: unclosed quote\n");
             free_tokens(head);
             return (NULL);
           }
@@ -113,7 +113,7 @@ t_token *lexer(char *input_line)
       char *word_value = (char *)malloc(token_len + 1);
       if (!word_value)
       {
-        perror("malloc failed for word_value");
+        perror("minishel: malloc failed for word_value");
         free_tokens(head);
         return (NULL);
       }
