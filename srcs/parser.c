@@ -63,7 +63,7 @@ t_command *parse_input(t_token *token_list)
       if (!current_token->next || current_token->next->type != WORD)
       {
         fprintf(stderr, "minishell: Syntax error near unexpected token '%s'\n",
-          current_token->next ? current_token->next->value : "newline");
+          current_token->next ? current_token->next->value: "newline");
         free_tokens(token_list);
         free_commands(head_cmd);
         return (NULL);
@@ -92,7 +92,7 @@ t_command *parse_input(t_token *token_list)
         return (NULL);
       }
       add_redir_to_command(current_cmd, new_redir);
-      current_token = current_token->next->next;
+      current_token = current_token->next->next; // Avanza el operador y el nombre del.
     }
     else if (current_token->type == PIPE)
     {
