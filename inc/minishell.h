@@ -20,6 +20,7 @@
 # include "command.h"
 # include "lexer.h"
 # include "parser.h"
+# include "expander.h"
 
 // include "executor.h"
 // include "builtins.h"

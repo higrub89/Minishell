@@ -1,7 +1,7 @@
 #include "../inc/expander.h"
 #include "../libft/inc/libft.h"
 
-static char *ft_strjoin_and_free_first(char *s1, const char *s2)
+static char *ft_strjoin_and_free_first(char *s1, char *s2)
 {
   char *new_str;
 
@@ -34,6 +34,8 @@ char  *expand_string(char *original_str, char **envp, int last_exit_status)
   char *expanded_str;
   char *var_name;
   char *var_value;
+  char *var_value_raw;
+  char *var_value_dup;
   int i;
   int start_exp;
   int len_var_name;
@@ -100,52 +102,56 @@ char  *expand_string(char *original_str, char **envp, int last_exit_status)
           char *dollar_char_literal = ft_substr(original_str, i, 2);
           if (!dollar_char_literal)
           {
-            free(expand_string);
+            free(expanded_str);
             return (NULL);
           }
           expanded_str = ft_strjoin_and_free_first(expanded_str, dollar_char_literal);
           free(dollar_char_literal);
-          if (!expand_string)
+          if (!expanded_str)
             return (NULL);
           i += 2; // saltar '$' y el caracter
         }
       }
       else // Nombre de variable válido.
       {
-        var_name = ft_substr()
+        var_name = ft_substr(original_str, start_exp, len_var_name);
+        if (!var_name)
+        {
+          free(expanded_str);
+          return (NULL);
+        }
+        var_value_raw = getenv(var_name); // obtener el valor de la variable.
+        free(var_name);
+        if (var_value_raw) // si la variable existe concatenamos su valor.
+        {
+          var_value_dup = ft_strdup(var_value_raw);
+          if (!var_value_dup)
+          {
+            free(expanded_str);
+            return (NULL);
+          }
+          expanded_str = ft_strjoin_and_free_first(expanded_str, var_value_dup);
+          free(var_value_dup);
+          if (!expanded_str)
+            return (NULL);
+        }
+        i += (1 + len_var_name);
       }
     }
-    else if (original_str[i] == '$' && in_double_quotes == 0)
+    else
     {
-      start_exp = i + 1; // Inicio del nombre de la variable.
-      len_var_name = get_var_name_len(original_str + start_exp);
-      if (len_var_name == 0) // solo es '$' o '$?', con caracter no valido.
+      char *char_str = ft_substr(original_str, i, 1);
+      if (!char_str)
       {
-        if (original_str[start_exp] && 
-          !ft_isalnum(original_str[start_exp]) &&
-          original_str[start_exp] != '_')
-        {
-          if (original_str[start_exp] == '?')
-          {
-            var_value = ft_atoi(last_exit_status);
-            if (!var_value)
-            {
-              free(expanded_str);
-              return (NULL);
-            }
-            expanded_str = ft_strjoin_and_free_first(expanded_str, var_value);
-            free(var_value);
-            if (!expanded_str)
-              return (NULL);
-            i += 2; // saltar '$' y '?'
-            continue;
-          }
-          else // otros caracteres despues de '$' que no sn validos '$!' '$'
-          {
-
-          }
-        }
+        free(expanded_str);
+        return (NULL);
       }
+      expanded_str = ft_strjoin_and_free_first(expanded_str, char_str);
+      free(char_str);
+      if (!expanded_str)
+        return (NULL);
+      i++;
     }
   }
+  return (expanded_str);
 }
