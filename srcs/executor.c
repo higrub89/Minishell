@@ -1,7 +1,6 @@
 #include "../inc/executor.h"
-#include "../inc/libft.h"
+#include "../libft/inc/libft.h"
 
-extern char **environ;
 
 char *find_command_path(char *cmd_name)
 {
@@ -65,4 +64,69 @@ char *find_command_path(char *cmd_name)
     free(paths[i++]);
   free(paths);
   return (NULL);
+}
+
+int execute_external_command(t_command *cmd, int *last_exit_status)
+{
+  char *cmd_path;
+  pid_t pid;
+  int status;
+
+  if (!cmd || !cmd->args || !cmd->args[0])
+  {
+    *last_exit_status = 1;
+    return (*last_exit_status);
+  }
+
+  cmd_path = find_command_path(cmd->args[0]);
+  if (!cmd_path)
+  {
+    ft_putstr_fd("minishell: ", STDERR_FILENO);
+    ft_putstr_fd(cmd->args[0], STDERR_FILENO);
+    ft_putstr_fd(": command not found\n", STDERR_FILENO);
+    *last_exit_status = 127;
+    return (*last_exit_status);
+  }
+
+  pid = fork();
+  if (pid == -1)
+  {
+    perror("minishell: fork");
+    free(cmd_path);
+    *last_exit_status = 1;
+    return (*last_exit_status);
+  }
+  else if (pid == 0)
+  {
+    // Redirecciones , pipe, builting 
+    execve(cmd_path, cmd->args, environ);
+
+    perror("minishell: execve");
+    free(cmd_path);
+    exit(126);
+  }
+  else
+  {
+    if (waitpid(pid, &status, 0) == -1)
+    {
+      perror("minishell: waitpid");
+      *last_exit_status = 1;
+      free(cmd_path);
+      return (*last_exit_status);
+    }
+    if (WIFEXITED(status))
+    {
+      *last_exit_status = WEXITSTATUS(status);
+    }
+    else if (WIFSIGNALED(status))
+    {
+      *last_exit_status = 128 + WTERMSIG(status);
+      if (WTERMSIG(status) == SIGQUIT)
+      {
+        ft_putstr_fd("Quit (core dumped)\n", STDERR_FILENO);
+      }
+    }
+    free(cmd_path);
+  }
+  return (*last_exit_status);
 }

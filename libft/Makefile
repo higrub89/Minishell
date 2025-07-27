@@ -17,6 +17,7 @@ FTIS_DIR		=	$(SRC_DIR)ft_is/ft_isalnum.c \
 					$(SRC_DIR)ft_is/ft_isalpha.c \
 					$(SRC_DIR)ft_is/ft_isascii.c \
 					$(SRC_DIR)ft_is/ft_isdigit.c \
+					$(SRC_DIR)ft_is/ft_isspace.c \
 					$(SRC_DIR)ft_is/ft_isprint.c 
 
 FTMEM_DIR		=	$(SRC_DIR)ft_mem/ft_bzero.c \

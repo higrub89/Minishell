@@ -16,7 +16,9 @@ RM					= rm -f
 COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/lexer.c \
 									srcs/parser.c \
-									srcs/utils_command.c 
+									srcs/utils_command.c \
+									srcs/expander.c \
+									srcs/executor.c
 									
 
 # Concatenate all source files

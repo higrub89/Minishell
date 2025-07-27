@@ -21,6 +21,7 @@
 # include "lexer.h"
 # include "parser.h"
 # include "expander.h"
+# include "executor.h"
 
 // include "executor.h"
 // include "builtins.h"
@@ -30,6 +31,6 @@
 # include <readline/history.h>
 
 
-int main(void);
+int main(int argc, char **argv, char **envp);
 
 #endif
