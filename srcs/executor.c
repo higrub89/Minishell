@@ -45,7 +45,7 @@ char *find_command_path(char *cmd_name)
       free(paths);
       return (NULL);
     }
-    ft_strcpy(full_path, paths);
+    ft_strcpy(full_path, paths[i]);
     ft_strcat(full_path, "/");
     ft_strcat(full_path, cmd_name);
 
