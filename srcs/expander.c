@@ -1,6 +1,19 @@
 #include "../inc/expander.h"
 #include "../libft/inc/libft.h"
 
+extern int g_last_exit_status;
+
+static char *get_env_value(const char *name, char **envp)
+{
+  size_t name_len = ft_strlen(name);
+  while(*envp)
+  {
+    if (ft_strncmp(*envp, name, name_len) == 0 && (*envp)[name_len] == '=')
+      return (*envp + name_len);
+  }
+  return (NULL);
+}
+
 static char *ft_strjoin_and_free_first(char *s1, char *s2)
 {
   char *new_str;

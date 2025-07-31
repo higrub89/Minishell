@@ -8,8 +8,7 @@
 # include "command_utils.h"
 
 // prototipo de la función pricipal del parser.
-t_command *parse_input(t_token *token_list);
-
-
+t_command *parse_input(t_token *token_list, char **envp);
+void free_commands(t_command *head);
 
 #endif

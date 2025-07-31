@@ -1,4 +1,5 @@
 #include "../inc/parser.h"
+#include "../inc/expander.h"
 #include "../libft/inc/ft_printf.h"
 
 //Función principal del parser.
