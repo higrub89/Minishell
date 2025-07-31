@@ -23,7 +23,6 @@
 # include "expander.h"
 # include "executor.h"
 
-// include "executor.h"
 // include "builtins.h"
 
 # include <errno.h>

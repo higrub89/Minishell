@@ -99,6 +99,11 @@ int execute_external_command(t_command *cmd, int *last_exit_status)
   else if (pid == 0)
   {
     // Redirecciones , pipe, builting 
+    if (handle_redirecctions(cmd->redirs) != 0)
+    {
+      free(cmd_path);
+      exit (1);
+    }
     execve(cmd_path, cmd->args, environ);
 
     perror("minishell: execve");

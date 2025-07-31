@@ -18,7 +18,8 @@ COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/parser.c \
 									srcs/utils_command.c \
 									srcs/expander.c \
-									srcs/executor.c
+									srcs/executor.c \
+									srcs/redirecction.c
 									
 
 # Concatenate all source files
