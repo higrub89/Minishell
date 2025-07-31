@@ -2,6 +2,7 @@
 # define COMMAND_H
 
 # include <stddef.h> // para size_t;
+# include <stdbool.h>
 
 //estructura Enum para los 
 typedef enum s_redir_type
@@ -17,6 +18,7 @@ typedef struct s_redirection
 {
   t_redir_type type;
   char    *file;
+  bool  expand_heredoc_content;
   struct s_redirection *next;
 } t_redirection;
 
