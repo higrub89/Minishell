@@ -6,6 +6,7 @@
 # include "lexer.h"
 # include "token_utils.h"
 # include "command_utils.h"
+# include "command.h"
 
 // prototipo de la función pricipal del parser.
 t_command *parse_input(t_token *token_list, char **envp);
