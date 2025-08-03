@@ -1,7 +1,33 @@
 #include "../inc/executor.h"
+#include "../inc/expander.h"
+#include "../inc/parser.h"
 #include "../libft/inc/libft.h"
 
+extern int g_last_exit_status;
 
+static int open_redir_file(t_redirection *redir, int *last_exit_status_ptr)
+{
+  int fd;
+
+  fd = -1;
+  if (redir->type == REDIR_IN)
+  {
+    if (access(redir->file, F_OK) == -1)
+    {
+      fprintf(stderr, "minishell: %s: NO such file or directory\n", redir->file);
+      *last_exit_status_ptr = 1;
+      return (-1);
+    }
+    if (access(redir->file, R_OK) == -1)
+    {
+      fprintf(stderr, "minishell: %s: Permission denied\n", redir->file);
+      *last_exit_status_ptr = 1;
+      return (-1);
+    }
+    fd = open(redir->file, O_RDONLY);
+  }
+  else if (redir->type == REDIR_OUT) // >
+}
 char *find_command_path(char *cmd_name)
 {
   char *path_env;
