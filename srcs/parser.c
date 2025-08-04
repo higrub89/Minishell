@@ -1,10 +1,76 @@
 #include "../inc/parser.h"
 #include "../inc/expander.h"
+#include "../inc/executor.h"
 #include "../libft/inc/ft_printf.h"
 #include "../libft/inc/libft.h"
 
-
 extern int g_last_exit_status;
+
+static int procces_heredoc_input(char *delimiter)
+{
+  int pipe_fds[2];
+  char *line;
+
+  if (pipe(pipe_fds) == -1)
+  {
+    perror("minishell: pipe for heredoc");
+    return (-1);
+  }
+  while(1)
+  {
+    line = readline("> ");
+    if (!line) // EOF (Ctrl+D)
+    {
+      ft_putstr_fd("minishel: warning: here-document delimited by end-of-file (wanted '", 
+        STDERR_FILENO);
+      ft_putstr_fd(delimiter, STDERR_FILENO);
+      ft_putstr_fd("')\n", STDERR_FILENO);
+      close(pipe_fds[1]);
+      return (-1);
+    }
+    if (ft_strcmp(line, delimiter) == 0)
+    {
+      free(line);
+      break;
+    }
+    write(pipe_fds[1], line, ft_strlen(line));
+    write(pipe_fds[1], "\n", 1);
+    free(line);
+  }
+  close(pipe_fds[1]);
+  return (pipe_fds[0]);
+}
+
+static int handle_command_heredocs(t_command *cmd, char **envp)
+{
+  (void)envp;
+  t_redirection *current_redir = cmd->redirs;
+  t_redirection *last_heredoc_redir = NULL;
+
+  while (current_redir)
+  {
+    if (current_redir->type == REDIR_HEREDOC)
+    {
+      last_heredoc_redir = current_redir;
+    }
+    current_redir = current_redir->next;
+  }
+  if (last_heredoc_redir)
+  {
+    if (cmd->heredoc_fd != -1)
+    {
+      close(cmd->heredoc_fd);
+      cmd->heredoc_fd = -1;
+    }
+    cmd->heredoc_fd = procces_heredoc_input(last_heredoc_redir->file);
+    if (cmd->heredoc_fd == -1)
+    {
+      return (-1);
+    }
+  }
+  return (0);
+}
+
 //Función principal del parser.
 t_command *parse_input(t_token *token_list, char **envp)
 {
@@ -28,6 +94,7 @@ t_command *parse_input(t_token *token_list, char **envp)
         free_commands(head_cmd);
         return (NULL);
       }
+      current_cmd->heredoc_fd = -1;
       if (!head_cmd)
         head_cmd = current_cmd;
       else
@@ -82,8 +149,8 @@ t_command *parse_input(t_token *token_list, char **envp)
         free_commands(head_cmd);
         return (NULL);
       }
-      char *file_or_delimiter_value = NULL;
-      bool should_expand_content = false;
+      char *file_name_or_delimiter = NULL;
+      bool expand_content_flag = false; // flag para heredoc
       if (redir_enum_type == REDIR_HEREDOC)
       {
         char *delimiter_token_value = current_token->next->value;
@@ -92,8 +159,8 @@ t_command *parse_input(t_token *token_list, char **envp)
         if (len > 1 && delimiter_token_value[0] == '\'' && 
             delimiter_token_value[len - 1] == '\'')
         {
-          file_or_delimiter_value = ft_substr(delimiter_token_value, 1, len - 2);
-          should_expand_content = false;
+          file_name_or_delimiter = ft_substr(delimiter_token_value, 1, len - 2);
+          expand_content_flag = false; // contenido no se expande
         }
         else if (len > 1 && delimiter_token_value[0] == '"' &&  
                   delimiter_token_value[len - 1] == '"')
@@ -105,18 +172,29 @@ t_command *parse_input(t_token *token_list, char **envp)
             free_commands(head_cmd);
             return (NULL);
           }
-          file_or_delimiter_value = expand_single_string(unquoted_delim, envp, g_last_exit_status);
+          file_name_or_delimiter = expand_single_string(unquoted_delim, envp, g_last_exit_status);
           free(unquoted_delim);
-          should_expand_content = true;
+          expand_content_flag = true;
         }
-        else
+        else // Sin comillas
         {
-          // --- ¡CAMBIO AQUÍ! Pasar envp a expand_single_string ---
-          file_or_delimiter_value = expand_single_string(delimiter_token_value, envp, g_last_exit_status);
-          should_expand_content = true;
+          file_name_or_delimiter = expand_single_string(delimiter_token_value, envp, g_last_exit_status);
+          expand_content_flag = true;
         }
-        if (!file_or_delimiter_value) // ERROR MALLOC/EXPANSION
+        if (!file_name_or_delimiter) // ERROR MALLOC/EXPANSION
         {
+          free_tokens(token_list);
+          free_commands(head_cmd);
+          return (NULL);
+        }
+        if (current_cmd->heredoc_fd != -1)
+        {
+          close(current_cmd->heredoc_fd);
+        }
+        current_cmd->heredoc_fd = procces_heredoc_input(file_name_or_delimiter);
+        if (current_cmd->heredoc_fd == -1)
+        {
+          free(file_name_or_delimiter);
           free_tokens(token_list);
           free_commands(head_cmd);
           return (NULL);
@@ -125,27 +203,31 @@ t_command *parse_input(t_token *token_list, char **envp)
       else // PARA <, >, >>
       {
         // Para redirecciones, el fille es simplemente el valor del token
-        file_or_delimiter_value = ft_strdup(current_token->next->value);
-        if (!file_or_delimiter_value)
+        file_name_or_delimiter = ft_strdup(current_token->next->value);
+        if (!file_name_or_delimiter)
         {
           free_tokens(token_list);
           free_commands(head_cmd);
           return (NULL);
         }
-        should_expand_content = false;
+        expand_content_flag = false;
       }
         // crear nodo new_redir una sola vez despues de procesar el valor.
-      new_redir = create_redirection_node(redir_enum_type, file_or_delimiter_value);
+      new_redir = create_redirection_node(redir_enum_type, file_name_or_delimiter);
       if (!new_redir)
       {
-        free(file_or_delimiter_value); //liberar si falla la creación del nodo.
+        free(file_name_or_delimiter); //liberar si falla la creación del nodo.
+        if (redir_enum_type == REDIR_HEREDOC && current_cmd->heredoc_fd != -1)
+        {
+          close(current_cmd->heredoc_fd);
+          current_cmd->heredoc_fd = -1;
+        }
         free_tokens(token_list);
         free_commands(head_cmd);
         return (NULL);
       }
       // Asignar el flag solo para los heredocs 
-      new_redir->expand_heredoc_content = should_expand_content;
-      free(file_or_delimiter_value);
+      new_redir->expand_heredoc_content = +expand_content_flag;
       add_redir_to_command(current_cmd, new_redir);
       current_token = current_token->next->next; // Avanza el operador y el nombre del.
     }
@@ -175,6 +257,15 @@ t_command *parse_input(t_token *token_list, char **envp)
       free_tokens(token_list);
       free_commands(head_cmd);
       return(NULL);
+    }
+  }
+  if (current_cmd)
+  {
+    if (handle_command_heredocs(current_cmd, envp) == -1)
+    {
+      free_tokens(token_list);
+      free_commands(head_cmd);
+      return (NULL);
     }
   }
   return (head_cmd);
