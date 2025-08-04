@@ -79,7 +79,13 @@ static int apply_redirections(t_command *cmd, int *last_exit_status_ptr)
     }
     else if (redir->type == REDIR_HEREDOC)
     {
-      if (dup2(cmd->heredoc_fd, STDIN_FILENO) == -1)
+      if (cmd->heredoc_fd == -1)
+      {
+        fprintf(stderr, "minishell: internal error: heredoc file descriptor not set");
+        *last_exit_status_ptr = 1;
+        return (-1);
+      }
+      if (dup2(cmd->heredoc_fd, STDIN_FILENO) == -1);
       {
         perror("minishell: dup2 for heredoc");
         *last_exit_status_ptr = 1;
@@ -92,136 +98,205 @@ static int apply_redirections(t_command *cmd, int *last_exit_status_ptr)
   return (0);
 }
 
-char *find_command_path(char *cmd_name)
+static char **get_paths(char **envp)
 {
-  char *path_env;
-  char **paths;
+  (void)envp;
+  return (ft_split("/bin:/usr/bin", ':'));
+}
+
+static char *find_cmd_path(const char *cmd, char **paths)
+{
   char *full_path;
+  char *temp_path;
   int i;
 
-  if (!cmd_name)
+  if (!cmd || !paths)
     return (NULL);
-  if (ft_strchr(cmd_name, '/') && access(cmd_name, F_OK | X_OK) == 0)
+    
+  if (ft_strchr(cmd, '/') != NULL)
   {
-    return (ft_strdup(cmd_name));
-  }
-  path_env = NULL;
-  i = 0;
-  while(environ[i]) // Buscar "PATH=" en el array global 'environ'
-  {
-    if (ft_strncmp(environ[i], "PATH=", 5) == 0)
-    {
-      
-      path_env = environ[i] + 5; // obtener la cadena después de "PATH="
-      break;
-    }
-    i++;
-  }
-  if (!path_env) // Si no encuentra la variable PTAH
+    if (access(cmd, X_OK) == 0)
+      return (ft_strdup(cmd));
     return (NULL);
-  paths = ft_split(path_env, ':');
-  if (!paths)
-    return (NULL);
+  }
+
   i = 0;
   while (paths[i])
   {
-    full_path = (char *)malloc(ft_strlen(paths[i]) + ft_strlen(cmd_name) + 2);
-    if (!full_path)
-    {
-      i = 0;
-      while (paths[i])
-        free(paths[i++]);
-      free(paths);
+    temp_path = ft_strjoin(paths[i], "/");
+    if (!temp_path)
       return (NULL);
-    }
-    ft_strcpy(full_path, paths[i]);
-    ft_strcat(full_path, "/");
-    ft_strcat(full_path, cmd_name);
-
-    if (access(full_path, F_OK | X_OK) == 0)
-    {
-      i = 0;
-      while (paths[i])
-        free(paths[i++]);
-      free(paths);
+    full_path = ft_strjoin(temp_path, cmd);
+    free(temp_path);
+    if (!full_path)
+      return (NULL);
+    if (access(full_path, X_OK) == 0)
       return (full_path);
-    }
     free(full_path);
     i++;
   }
-  i = 0;
-  while (paths[i])
-    free(paths[i++]);
-  free(paths);
   return (NULL);
 }
 
-int execute_external_command(t_command *cmd, int *last_exit_status)
+static void free_str_array(char **arr)
 {
-  char *cmd_path;
+  if (!arr)
+    return;
+  int i;
+
+  i = 0;
+  while (arr[i])
+  {
+    free(arr[i]);
+    i++;
+  }
+  free(arr);
+}
+
+
+int execute_commands(t_command *commands, char **envp, int *last_exit_status_ptr)
+{
+  t_command *current_cmd;
   pid_t pid;
-  int status;
+  int pipe_fds[2];
+  int prev_pipe_in_fd = -1;
+  pid_t *child_pids;
+  int num_commands = 0;
 
-  if (!cmd || !cmd->args || !cmd->args[0])
+  current_cmd = commands;
+  while(current_cmd)
   {
-    *last_exit_status = 1;
-    return (*last_exit_status);
+    num_commands++;
+    current_cmd = current_cmd->next;
   }
-
-  cmd_path = find_command_path(cmd->args[0]);
-  if (!cmd_path)
+  child_pids = ft_calloc(num_commands, sizeof(pid_t));
+  if (!child_pids)
   {
-    ft_putstr_fd("minishell: ", STDERR_FILENO);
-    ft_putstr_fd(cmd->args[0], STDERR_FILENO);
-    ft_putstr_fd(": command not found\n", STDERR_FILENO);
-    *last_exit_status = 127;
-    return (*last_exit_status);
+    perror("minishell: calloc");
+    *last_exit_status_ptr = 1;
+    return (1);
   }
-
-  pid = fork();
-  if (pid == -1)
+  num_commands = 0;
+  current_cmd = commands;
+  while(current_cmd)
   {
-    perror("minishell: fork");
-    free(cmd_path);
-    *last_exit_status = 1;
-    return (*last_exit_status);
-  }
-  else if (pid == 0)
-  {
-    // Redirecciones , pipe, builting 
-    if (handle_redirecctions(cmd->redirs) != 0)
+    if (current_cmd->next)
     {
-      free(cmd_path);
-      exit (1);
-    }
-    execve(cmd_path, cmd->args, environ);
-
-    perror("minishell: execve");
-    free(cmd_path);
-    exit(126);
-  }
-  else
-  {
-    if (waitpid(pid, &status, 0) == -1)
-    {
-      perror("minishell: waitpid");
-      *last_exit_status = 1;
-      free(cmd_path);
-      return (*last_exit_status);
-    }
-    if (WIFEXITED(status))
-    {
-      *last_exit_status = WEXITSTATUS(status);
-    }
-    else if (WIFSIGNALED(status))
-    {
-      *last_exit_status = 128 + WTERMSIG(status);
-      if (WTERMSIG(status) == SIGQUIT)
+      if (pipe(pipe_fds) == -1)
       {
-        ft_putstr_fd("Quit (core dumped)\n", STDERR_FILENO);
+        perror("minishell: pipe");
+        *last_exit_status_ptr = 1;
+        if (prev_pipe_in_fd != -1)
+          close(prev_pipe_in_fd);
+        free(child_pids);
+        return (1);
       }
     }
-    free(cmd_path);
+    pid = fork();
+    if (pid == -1)
+    {
+      perror("minishell: fork");
+      *last_exit_status_ptr = 1;
+      if (prev_pipe_in_fd != -1)
+        close(prev_pipe_in_fd);
+      if (current_cmd->next)
+      {
+        close(pipe_fds[0]);
+        close(pipe_fds[1]);
+      }
+      free(child_pids);
+      return (1);
+    }
+    else if (pid == 0)
+    {
+      if (current_cmd->heredoc_fd != -1)
+      {
+        close(pipe_fds[1]);
+      }
+      if (prev_pipe_in_fd != -1)
+      {
+        if (dup2(prev_pipe_in_fd, STDIN_FILENO) == -1)
+        {
+          perror("minishell: dup2 stdin child");
+          exit (1);
+        }
+        close(prev_pipe_in_fd);
+      }
+      if (current_cmd->next)
+      {
+        if (dup2(pipe_fds[1], STDOUT_FILENO) == -1)
+        {
+          perror("minishell: dup2 stdout child");
+          exit(1);
+        }
+        close(pipe_fds[0]);
+        close(pipe_fds[1]);
+      }
+      if (apply_redirections(current_cmd, last_exit_status_ptr) == -1)
+        exit(*last_exit_status_ptr);
+      // --- Lógica de Built-ins COMENTADA POR AHORA ---
+            // if (current_cmd->args && is_builtin(current_cmd->args[0]))
+            // {
+            //     int builtin_status = execute_builtin(current_cmd, &envp, last_exit_status_ptr);
+            //     exit(builtin_status);
+            // }
+      if (current_cmd->args)
+      {
+        char **paths = get_paths(envp);
+        char *cmd_path = find_cmd_path(current_cmd->args[0], paths);
+
+        if (!cmd_path)
+        {
+          fprintf(stderr, "minishell: %s: command not found\n", current_cmd[0]);
+          free_str_array(paths);
+          exit(127);
+        }
+        execve(cmd_path, current_cmd->args, envp);
+        perror("minishell: execve");
+        free(cmd_path);
+        free_str_array(paths);
+        exit(126);
+      }
+      else
+      {
+        exit(0);
+      }
+    }
+    else // prodceso padre..
+    {
+      child_pids[num_commands++] = pid;
+      if (prev_pipe_in_fd != -1)
+        close(prev_pipe_in_fd);
+      if (current_cmd->next)
+      {
+        close(pipe_fds[1]);
+        prev_pipe_in_fd = pipe_fds[0];
+      }
+      else
+      {
+        if (prev_pipe_in_fd != -1)
+        {
+          close(prev_pipe_in_fd);
+          prev_pipe_in_fd = -1;
+        }
+      }
+    }
+    current_cmd = current_cmd->next;
   }
-  return (*last_exit_status);
+  int status;
+  int i = 0;
+  while(i < num_commands)
+  {
+    waitpid(child_pids[i], &status, 0);
+    if (i == num_commands - 1)
+    {
+      if (WIFEXITED(status))
+        *last_exit_status_ptr = WEXITSTATUS(status);
+      else if (WIFSIGNALED(status))
+        *last_exit_status_ptr = 128 + WTERMSIG(status);
+    }
+    i++;
+  }
+  free(child_pids);
+  return (0);
 }
