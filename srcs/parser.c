@@ -102,7 +102,7 @@ t_command *parse_input(t_token *token_list, char **envp)
           if (!unquoted_delim)
           {
             free_tokens(token_list);
-            free_tokens(head_cmd);
+            free_commands(head_cmd);
             return (NULL);
           }
           file_or_delimiter_value = expand_single_string(unquoted_delim, envp, g_last_exit_status);

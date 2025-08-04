@@ -34,9 +34,9 @@ int main(int argc, char **argv, char **envp)
          continue;
       }
       expand_variables(commands, envp, &g_last_exit_status);
-      if (commands && commands->args && commands->args[0])
+      if (commands)
       {
-         g_last_exit_status = execute_external_command(commands, &g_last_exit_status);
+         execute_commands(commands, envp, &g_last_exit_status);
       }
       else
       {
