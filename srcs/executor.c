@@ -85,7 +85,7 @@ static int apply_redirections(t_command *cmd, int *last_exit_status_ptr)
         *last_exit_status_ptr = 1;
         return (-1);
       }
-      if (dup2(cmd->heredoc_fd, STDIN_FILENO) == -1);
+      if (dup2(cmd->heredoc_fd, STDIN_FILENO) == -1)
       {
         perror("minishell: dup2 for heredoc");
         *last_exit_status_ptr = 1;
@@ -247,7 +247,7 @@ int execute_commands(t_command *commands, char **envp, int *last_exit_status_ptr
 
         if (!cmd_path)
         {
-          fprintf(stderr, "minishell: %s: command not found\n", current_cmd[0]);
+          fprintf(stderr, "minishell: %s: command not found\n", current_cmd->args[0]);
           free_str_array(paths);
           exit(127);
         }
