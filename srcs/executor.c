@@ -27,7 +27,71 @@ static int open_redir_file(t_redirection *redir, int *last_exit_status_ptr)
     fd = open(redir->file, O_RDONLY);
   }
   else if (redir->type == REDIR_OUT) // >
+  {
+    fd = open(redir->file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  }
+  else if (redir->type == REDIR_APPEND)
+  {
+    fd = open(redir->file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+  }
+  if (fd == -1)
+  {
+    perror("minishell");
+    *last_exit_status_ptr = 1; 
+  }
+  return (fd);
 }
+
+static int apply_redirections(t_command *cmd, int *last_exit_status_ptr)
+{
+  t_redirection *redir;
+  int fd;
+
+  redir = cmd->redirs;
+  while(redir)
+  {
+    if (redir->type == REDIR_IN || redir->type == REDIR_OUT || redir->type == REDIR_APPEND)
+    {
+      fd = open_redir_file(redir, last_exit_status_ptr);
+      if (fd == -1)
+        return (-1);
+      if (redir->type == REDIR_IN)
+      {
+        if (dup2(fd, STDIN_FILENO) == -1)
+        {
+          perror("minishell: dup2 for stdin");
+          close(fd);
+          *last_exit_status_ptr = 1;
+          return (-1);
+        }
+      }
+      else
+      {
+        if (dup2(fd, STDOUT_FILENO) == -1)
+        {
+          perror("minishell: dup2 for stdout");
+          close(fd);
+          *last_exit_status_ptr = 1;
+          return (-1);
+        }
+      }
+      close(fd);
+    }
+    else if (redir->type == REDIR_HEREDOC)
+    {
+      if (dup2(cmd->heredoc_fd, STDIN_FILENO) == -1)
+      {
+        perror("minishell: dup2 for heredoc");
+        *last_exit_status_ptr = 1;
+        return (-1);
+      }
+      close(cmd->heredoc_fd);
+    }
+    redir = redir->next;
+  }
+  return (0);
+}
+
 char *find_command_path(char *cmd_name)
 {
   char *path_env;
