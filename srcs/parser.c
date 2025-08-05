@@ -77,37 +77,6 @@ static int procces_heredoc_input(char *delimiter, bool expand_content, char **en
     return (ret_fd); // Devuelve el extremo de lectura
 }
 
-/*
-static int handle_command_heredocs(t_command *cmd, char **envp)
-{
-  (void)envp;
-  t_redirection *current_redir = cmd->redirs;
-  t_redirection *last_heredoc_redir = NULL;
-
-  while (current_redir)
-  {
-    if (current_redir->type == REDIR_HEREDOC)
-    {
-      last_heredoc_redir = current_redir;
-    }
-    current_redir = current_redir->next;
-  }
-  if (last_heredoc_redir)
-  {
-    if (cmd->heredoc_fd != -1)
-    {
-      close(cmd->heredoc_fd);
-      cmd->heredoc_fd = -1;
-    }
-    cmd->heredoc_fd = procces_heredoc_input(last_heredoc_redir->file);
-    if (cmd->heredoc_fd == -1)
-    {
-      return (-1);
-    }
-  }
-  return (0);
-}*/
-
 //Función principal del parser.
 t_command *parse_input(t_token *token_list, char **envp)
 {
@@ -239,18 +208,6 @@ t_command *parse_input(t_token *token_list, char **envp)
             close(current_cmd->heredoc_fd);
           current_cmd->heredoc_fd = fd_result;
         }
-        /*if (current_cmd->heredoc_fd != -1)
-        {
-          close(current_cmd->heredoc_fd);
-        }
-        current_cmd->heredoc_fd = procces_heredoc_input(file_name_or_delimiter);
-        if (current_cmd->heredoc_fd == -1)
-        {
-          free(file_name_or_delimiter);
-          free_tokens(token_list);
-          free_commands(head_cmd);
-          return (NULL);
-        }*/
       }
       else // PARA <, >, >>
       {
@@ -311,15 +268,5 @@ t_command *parse_input(t_token *token_list, char **envp)
       return(NULL);
     }
   }
-  /*
-  if (current_cmd)
-  {
-    if (handle_command_heredocs(current_cmd, envp) == -1)
-    {
-      free_tokens(token_list);
-      free_commands(head_cmd);
-      return (NULL);
-    }
-  }*/
   return (head_cmd);
 }
