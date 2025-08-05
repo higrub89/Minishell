@@ -28,6 +28,7 @@ typedef struct s_command
   char    **args;
   t_redirection *redirs;
   int heredoc_fd;
+  int heredoc_error;
   struct s_command *next;
 } t_command;
 

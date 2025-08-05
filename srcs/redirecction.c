@@ -24,7 +24,7 @@ int handle_redirecctions_in_child(t_command *cmd)
   }
   current_redir = current_redir->next;
 }
-if (input_fd_to_use == -1 && cmd->heredoc_fd != -1)
+if (input_fd_to_use == -1 && cmd->heredoc_fd != -1 && cmd->heredoc_error == 0)
 {
   input_fd_to_use = cmd->heredoc_fd; 
 }
