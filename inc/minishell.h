@@ -22,6 +22,7 @@
 # include "parser.h"
 # include "expander.h"
 # include "executor.h"
+# include "env_utils.h"
 
 // include "builtins.h"
 
@@ -29,7 +30,12 @@
 # include <readline/readline.h>
 # include <readline/history.h>
 
+typedef struct s_minishell
+{
+  char **envp;
+  int last_exit_status;
+} t_struct;
 
-int main(int argc, char **argv, char **envp);
+//int main(int argc, char **argv, char **envp);
 
 #endif
