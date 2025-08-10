@@ -10,303 +10,190 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-
 #include "../inc/lexer.h"
-#include "../inc/token.h"
-#include "../libft/inc/libft.h"
 
 // crea un nuevo nodo de token
-t_token *create_new_token(char *value, t_token_type type)
+static t_token	*create_new_token(char *value, t_token_type type)
 {
-  t_token *new_token = (t_token *)ft_calloc(1, sizeof(t_token));
-  if (!new_token)
-  {
-    perror("malloc failed in create_new_token");
-    exit(EXIT_FAILURE);
-  }
+	t_token	*new_token;
 
-  new_token->value = ft_strdup(value);
-  if (!new_token->value)
-  {
-    perror("ft_strdup failed in create_new_token");
-    exit(EXIT_FAILURE);
-  }
-  new_token->type = type;
-  new_token->next = NULL;
-  return (new_token);
-}
-
-t_token *lexer(char *input_line)
-{
-  t_token *head = NULL;     //cabeza de la lista de tokens.
-  t_token *current = NULL;  //Puntero para añadir tokens al final de la lista.
-  int i = 0;
-
-  if(!input_line)
-    return (NULL);
-
-  while(input_line[i])
-  {
-    while (input_line[i] && (input_line[i] == ' ' || input_line[i] == '\t')) //Saltar espacios.
-      i++;
-    if (!input_line[i]) //Si terminamos de leer la linea despues de espacios.
-      break ;
-    if(input_line[i] == '<')
-    {
-      if (input_line[i+1] == '<')
-      {
-        add_token_to_list(&head, &current, create_new_token("<<", HEREDOC));
-        i += 2; //avanzo dos posiciones.
-      }
-      else
-      {
-        add_token_to_list(&head, &current, create_new_token("<", IN));
-        i += 1; //avanzo una posición.
-      }
-    }
-    else if(input_line[i] == '>')
-    {
-      if (input_line[i+1] == '>')
-      {
-        add_token_to_list(&head, &current, create_new_token(">>", APPE_OUT));
-        i += 2;
-      }
-      else
-      {
-        add_token_to_list(&head, &current, create_new_token(">", OUT));
-        i += 1;
-      }
-    }
-    else if(input_line[i] == '|')
-    {
-      add_token_to_list(&head, &current, create_new_token("|", PIPE));
-      i += 1;
-    }
-    else
-    {
-      int start = i; //Guardo el inicio del token actual.
-
-      while(input_line[i] && input_line[i] != ' ' && input_line[i] != '\t' 
-          && input_line[i] != '<' && input_line[i] != '>'  && input_line[i] != '|')
-      {
-        if (input_line[i] == '\'' || input_line[i] == '\"')
-        {
-          char quote_char = input_line[i];
-          i++;
-          while (input_line[i] && input_line[i] !=  quote_char)
-            i++;
-          if (input_line[i] == quote_char)
-            i++;
-          else
-          {
-            // Aquí debo manejar el caso cuando falta la comilla de cierre..
-            fprintf(stderr, "minishell: Syntax error: unclosed quote\n");
-            free_tokens(head);
-            return (NULL);
-          }
-        }
-        else
-        {
-          i++; // Es un caracter sin comillas que forma parte de la palabra!.
-        }
-      }
-      int token_len = i - start;
-      char *word_value = (char *)malloc(token_len + 1);
-      if (!word_value)
-      {
-        perror("minishel: malloc failed for word_value");
-        free_tokens(head);
-        return (NULL);
-      }
-      ft_strncpy(word_value, &input_line[start], token_len);
-      word_value[token_len] = '\0';
-      add_token_to_list(&head, &current, create_new_token(word_value, WORD));
-      free(word_value);
-    }
-  }
-  return (head);
+	new_token = (t_token *)ft_calloc(1, sizeof(t_token));
+	if (!new_token)
+	{
+		perror("malloc failed in create_new_token");
+		exit(EXIT_FAILURE);
+	}
+	new_token->value = ft_strdup(value);
+	if (!new_token->value)
+	{
+		perror("ft_strdup failed in create_new_token");
+		free(new_token);
+		exit(EXIT_FAILURE);
+	}
+	new_token->type = type;
+	new_token->next = NULL;
+	new_token->prev = NULL;
+	return (new_token);
 }
 
 // Añade un token a la lista enlazada
-void add_token_to_list(t_token **head, t_token **current, t_token *new_token)
+static void	add_token_to_list(t_token **head, t_token **current,
+		t_token *new_token)
 {
-  if (!*head)
-  {
-    *head = new_token;
-    *current = new_token;
-  }
-  else
-  {
-    (*current)->next = new_token;
-    *current = new_token;
-  }
+	if (!*head)
+	{
+		*head = new_token;
+		*current = new_token;
+	}
+	else
+	{
+		(*current)->next = new_token;
+		new_token->prev = *current;
+		*current = new_token;
+	}
 }
 
-void free_tokens(t_token *head)
+void	free_tokens(t_token *head)
 {
-  t_token *tmp;
-  while (head)
-  {
-    tmp = head;
-    head = head->next;
-    if (tmp->value) // Asegurarnos de que value no sea NULL antes de liberar.
-      free(tmp->value);
-    free(tmp);
-  }
+	t_token	*tmp;
+
+	while (head)
+	{
+		tmp = head;
+		head = head->next;
+		if (tmp->value)
+			// Asegurarnos de que value no sea NULL antes de liberar.
+			free(tmp->value);
+		free(tmp);
+	}
 }
 
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   lexer.c                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/06/24 16:34:07 by rhiguita          #+#    #+#             */
-/*   Updated: 2025/06/24 16:34:10 by rhiguita         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-
-#include "../inc/lexer.h"
-#include "../inc/token.h"
-#include "../minishell.h"
-#include "../libft/inc/libft.h"
-
-t_token *create_new_token(char *value, t_token_type type)
+// Funciones auxiliares para funcion Principal
+static int	skip_spaces(const char *input, int i)
 {
-  t_token *new_token = (t_token *)malloc(sizeof(t_token));
-  if (!new_token)
-  {
-    perror("malloc failed in create_new_token");
-    exit(EXIT_FAILURE);
-  }
-
-  new_token->value = ft_strdup(value);
-  if (!new_token->value)
-  {
-    perror("ft_strdup failed in create_new_token");
-    exit(EXIT_FAILURE);
-  }
-  new_token->type = type;
-  new_token->next = NULL;
-  return (new_token);
+	while (input[i] && (input[i] == ' ' || input[i] == '\t'))
+		i++;
+	return (i);
 }
 
-//Funcion Principal
-t_token *lexer(char *input_line, t_struct *mini)
+static int	handle_redirection_in(const char *input, int i, t_token **head,
+		t_token **current)
 {
-  t_token *head = NULL;     //cabeza de la lista de tokens.
-  t_token *current = NULL;  //Puntero para añadir tokens al final de la lista.
-  int i = 0;
-
-  if(!input_line)
-    return (NULL);
-
-  while(input_line[i])
-  {
-    while (input_line[i] && (input_line[i] == ' ' || input_line[i] == '\t')) //Saltar espacios.
-      i++;
-    if (!input_line[i]) //Si terminamos de leer la linea despues de espacios.
-      break ;
-    if(input_line[i] == '<')
-    {
-      if (input_line[i+1] == '<')
-      {
-        add_token_to_list(&head, &current, create_new_token("<<", HEREDOC));
-        i += 2; //avanzo dos posiciones.
-      }
-      else
-      {
-        add_token_to_list(&head, &current, create_new_token("<", IN));
-        i += 1; //avanzo una posición.
-      }
-    }
-    else if(input_line[i] == '>')
-    {
-      if (input_line[i+1] == '>')
-      {
-        add_token_to_list(&head, &current, create_new_token(">>", APPE_OUT));
-        i += 2;
-      }
-      else
-      {
-        add_token_to_list(&head, &current, create_new_token(">", OUT));
-        i += 1;
-      }
-    }
-    else if(input_line[i] == '|')
-    {
-      add_token_to_list(&head, &current, create_new_token("|", PIPE));
-      i += 1;
-    }
-    else
-    {
-      int start = i; //Guardo el inicio del token actual.
-
-      while(input_line[i] && input_line[i] != ' ' && input_line[i] != '\t' 
-          && input_line[i] != '<' && input_line[i] != '>'  && input_line[i] != '|')
-      {
-        if (input_line[i] == '\'' || input_line[i] == '\"')
-        {
-          char quote_char = input_line[i];
-          i++;
-          while (input_line[i] && input_line[i] !=  quote_char)
-            i++;
-          if (input_line[i] == quote_char)
-            i++;
-          else
-          {
-            // Aquí debo manejar el caso cuando falta la comilla de cierre..
-            fprintf(stderr, "minishell: Syntax error: unclosed quote\n");
-            free_tokens(head);
-            return (NULL);
-          }
-        }
-        else
-        {
-          i++; // Es un caracter sin comillas que forma parte de la palabra!.
-        }
-      }
-      int token_len = i - start;
-      char *word_value = (char *)malloc(token_len + 1);
-      if (!word_value)
-      {
-        perror("minishel: malloc failed for word_value");
-        free_tokens(head);
-        return (NULL);
-      }
-      ft_strncpy(word_value, &input_line[start], token_len);
-      word_value[token_len] = '\0';
-      add_token_to_list(&head, &current, create_new_token(word_value, WORD));
-      free(word_value);
-    }
-  }
-  return (head);
+	if (input[i + 1] == '<')
+	{
+		add_token_to_list(head, current, create_new_token("<<", HEREDOC));
+		return (i + 2);
+	}
+	add_token_to_list(head, current, create_new_token("<", IN));
+	return (i + 1);
 }
 
-void add_token_to_list(t_token **head, t_token **current, t_token *new_token)
+static int	handle_redirection_out(const char *input, int i, t_token **head,
+		t_token **current)
 {
-  if (!*head)
-  {
-    *head = new_token;
-    *current = new_token;
-  }
-  else
-  {
-    (*current)->next = new_token;
-    *current = new_token;
-  }
+	if (input[i + 1] == '>')
+	{
+		add_token_to_list(head, current, create_new_token(">>", APPE_OUT));
+		return (i + 2);
+	}
+	add_token_to_list(head, current, create_new_token(">", OUT));
+	return (i + 1);
 }
 
-void free_tokens(t_token *head)
+static int	handle_pipe(const char *input, int i, t_token **head,
+		t_token **current)
 {
-  t_token *tmp;
-  while (head)
-  {
-    tmp = head;
-    head = head->next;
-    free(tmp->value);
-    free(tmp);
-  }
+	add_token_to_list(head, current, create_new_token("|", PIPE));
+	return (i + 1);
+}
+
+static int	skip_quotes(const char *input, int i, char quote_char)
+{
+	i++;
+	while (input[i] && input[i] != quote_char)
+		i++;
+	if (input[i] == quote_char)
+		i++;
+	else
+		return (-1); // Error: comilla sin cerrar
+	return (i);
+}
+
+static int	extract_word(const char *input, int i, t_token **head,
+		t_struct *mini)
+{
+	int	new_i;
+
+	while (input[i] && input[i] != ' ' && input[i] != '\t' && input[i] != '<'
+		&& input[i] != '>' && input[i] != '|')
+	{
+		if (input[i] == '\'' || input[i] == '\"')
+		{
+			new_i = skip_quotes(input, i, input[i]);
+			if (new_i == -1)
+			{
+				fprintf(stderr, "minishell: Syntax error: unclosed quote\n");
+				mini->last_exit_status = 258;
+				free_tokens(*head);
+				return (-1);
+			}
+			i = new_i;
+		}
+		else
+			i++;
+	}
+	return (i);
+}
+
+static int	handle_word(const char *input, int i, t_token **head,
+		t_token **current, t_struct *mini)
+{
+	int		start;
+	int		token_len;
+	char	*word_value;
+
+	start = i;
+	i = extract_word(input, i, head, mini);
+	if (i < 0)
+		return (-1);
+	token_len = i - start;
+	word_value = (char *)malloc(token_len + 1);
+	if (!word_value)
+	{
+		perror("minishel: malloc failed for word_value");
+		free_tokens(*head);
+		return (-1);
+	}
+	ft_strncpy(word_value, (char *)&input[start], token_len);
+	word_value[token_len] = '\0';
+	add_token_to_list(head, current, create_new_token(word_value, WORD));
+	free(word_value);
+	return (i);
+}
+
+t_token	*lexer(const char *input, t_struct *mini)
+{
+	t_token *head = NULL;
+	t_token *current = NULL;
+	int i = 0;
+
+	if (!input)
+		return (NULL);
+	while (input[i])
+	{
+		i = skip_spaces(input, i);
+		if (!input[i])
+			break ;
+		if (input[i] == '<')
+			i = handle_redirection_in(input, i, &head, &current);
+		else if (input[i] == '>')
+			i = handle_redirection_out(input, i, &head, &current);
+		else if (input[i] == '|')
+			i = handle_pipe(input, i, &head, &current);
+		else
+			i = handle_word(input, i, &head, &current, mini);
+		if (i < 0)
+			return (NULL);
+	}
+	return (head);
 }

@@ -2,11 +2,8 @@
 # define PARSER_H
 
 # include "../libft/inc/ft_printf.h"
-# include "token.h"
+
 # include "lexer.h"
-# include "token_utils.h"
-# include "command_utils.h"
-# include "command.h"
 # include "minishell.h"
 
 // prototipo de la función pricipal del parser.
