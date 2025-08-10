@@ -13,22 +13,56 @@
 #ifndef MINISHELL_H
 # define MINISHELL_H
 
-# include "../libft/inc/libft.h"
-# include "../libft/inc/ft_printf.h"
-# include "../libft/inc/get_next_line.h"
-# include "token.h"
-# include "command.h"
-# include "lexer.h"
-# include "parser.h"
-# include "expander.h"
-# include "executor.h"
-# include "env_utils.h"
+# include <stdbool.h>
 
-// include "builtins.h"
+//Tipos de tokens.
+typedef enum e_token_type
+{
+  WORD,       //Una palabra normal.
+  PIPE,       //operador |
+  IN,   //operador <
+  OUT,  //operador >
+  APPE_OUT, //operador >>
+  HEREDOC,    //operador <<
 
-# include <errno.h>
-# include <readline/readline.h>
-# include <readline/history.h>
+} t_token_type;
+
+//Estructura para un token individual.
+typedef struct s_token
+{
+  char  *value;
+  t_token_type type;
+  struct s_token *next;
+  struct s_token *prev;
+} t_token;
+
+//Tipos de redirección
+typedef enum e_redir_type
+{
+  REDIR_IN,     // <
+  REDIR_OUT,    // >
+  REDIR_APPEND, // >>
+  REDIR_HEREDOC // <<
+} t_redir_type;
+
+// Estructura para las redirecciones.
+typedef struct s_redirection
+{
+  t_redir_type type;
+  char    *file;
+  int heredoc_fd;
+  bool  expand_heredoc_content;
+  bool  heredoc_error;
+  struct s_redirection *next;
+} t_redirection;
+
+// Estructura para un comando.
+typedef struct s_command
+{
+  char    **args;
+  t_redirection *redirs;
+  struct s_command *next;
+} t_command;
 
 typedef struct s_minishell
 {
@@ -36,6 +70,9 @@ typedef struct s_minishell
   int last_exit_status;
 } t_struct;
 
-//int main(int argc, char **argv, char **envp);
+t_struct *init_minishell_struct(char **envp_original);
+void cleanup_minishell(t_struct *mini);
+void free_commands(t_command *head);
+void free_tokens(t_token *head);
 
 #endif
