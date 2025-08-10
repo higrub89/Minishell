@@ -8,7 +8,7 @@
 # include <sys/types.h>
 # include <signal.h>
 
-int execute_commands(t_command *commands, char **envp, int *last_exit_status_ptr);
+int execute_commands(t_command *commands, t_struct *mini);
 int handle_redirecctions_in_child(t_command *cmd);
 
 #endif

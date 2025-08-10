@@ -43,21 +43,20 @@ $(NAME): 			$(OBJ) $(LIBFT)
 # Compile object files from source files
 $(OBJ_DIR)%.o:		$(SRC_DIR)%.c 
 					@mkdir -p $(@D)
-					@echo "compiling $<" | lolcat
-					@$(CC) $(CFLAGS) $(INC) -c $< -o $@ 2>&1 | lolcat
+					@echo "compiling $<" 
+					@$(CC) $(CFLAGS) $(INC) -c $< -o $@ 2>&1 
 
 clean:
 					@$(RM) -r $(OBJ_DIR)
 					@make clean -sC ./libft
-					@echo "Delete files objets" | lolcat
+					@echo "Delete files objets" 
 
 fclean: 			clean
 					@$(RM) $(NAME)
 					@$(RM) $(LIBFT)
-					@echo "Delete all files" | lolcat
+					@echo "Delete all files" 
 
 re: 				fclean all
-					@echo "Finsh Recompiling" | lolcat
-
+					@echo "Finsh Recompiling" 
 # Phony targets represent actions not files
 .PHONY: 			start all clean fclean re

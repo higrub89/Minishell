@@ -19,6 +19,8 @@ typedef struct s_redirection
   t_redir_type type;
   char    *file;
   bool  expand_heredoc_content;
+  //int heredoc_fd;
+  //char *heredoc_filename;
   struct s_redirection *next;
 } t_redirection;
 

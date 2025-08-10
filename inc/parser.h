@@ -7,9 +7,10 @@
 # include "token_utils.h"
 # include "command_utils.h"
 # include "command.h"
+# include "minishell.h"
 
 // prototipo de la función pricipal del parser.
-t_command *parse_input(t_token *token_list, char **envp);
+t_command *parse_input(t_token *token_list, t_struct *mini);
 void free_commands(t_command *head);
 
 #endif

@@ -2,8 +2,9 @@
 # define LEXER_H
 
 # include "token.h"
+# include "minishell.h"
 
-t_token *lexer(char *input_line); //función principal lexer.
+t_token *lexer(char *input_line, t_struct *mini); //función principal lexer.
 t_token *create_new_token(char *value, t_token_type type);
 t_token *lexer(char *input_line);
 void add_token_to_list(t_token **head, t_token **current, t_token *new_token);
