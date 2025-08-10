@@ -1,272 +1,295 @@
 #include "../inc/parser.h"
-#include "../inc/expander.h"
-#include "../inc/executor.h"
-#include "../libft/inc/ft_printf.h"
 #include "../libft/inc/libft.h"
 
-extern int g_last_exit_status;
-
-static int procces_heredoc_input(char *delimiter, bool expand_content, char **envp) // <-- AHORA
+// Crea un nuevo comando.
+t_command	*create_command_node(void)
 {
-    int pipe_fds[2];
-    char *line;
-    char *line_to_process; // Nueva variable para la línea expandida o literal
-    int ret_fd;
+	t_command	*new_cmd;
 
-    if (pipe(pipe_fds) == -1)
-    {
-        perror("minishell: pipe for heredoc");
-        return (-1);
-    }
-    ret_fd = pipe_fds[0]; // Guarda el FD de lectura para devolver
-
-    while(1)
-    {
-        line = readline("> ");
-        if (!line) // EOF (Ctrl+D)
-        {
-            ft_putstr_fd("minishel: warning: here-document delimited by end-of-file (wanted '",
-                STDERR_FILENO);
-            ft_putstr_fd(delimiter, STDERR_FILENO); // El 'delimiter' ya es el valor procesado
-            ft_putstr_fd("')\n", STDERR_FILENO);
-            close(pipe_fds[1]); // Cierra el extremo de escritura
-            return (-2);
-        }
-
-        // Determina la línea para comparar y escribir en el pipe
-        if (expand_content)
-        {
-            // Si el contenido del heredoc debe expandirse, expande la línea leída.
-            line_to_process = expand_single_string(line, envp, g_last_exit_status);
-            if (!line_to_process) // Error de malloc en expansión
-            {
-                free(line);
-                close(pipe_fds[1]);
-                return (-1);
-            }
-        }
-        else
-        {
-            // Si el contenido del heredoc NO debe expandirse, usa la línea leída tal cual.
-            // Creamos una copia para mantener la consistencia de free() después.
-            line_to_process = ft_strdup(line);
-            if (!line_to_process)
-            {
-                free(line);
-                close(pipe_fds[1]);
-                return (-1);
-            }
-        }
-
-        // Compara la línea procesada (expandida o literal) con el delimitador final.
-        if (ft_strcmp(line_to_process, delimiter) == 0)
-        {
-            free(line_to_process);
-            free(line); // La línea original de readline
-            break; // Delimitador encontrado
-        }
-
-        // Escribe la línea procesada (expandida o literal) en el pipe.
-        write(pipe_fds[1], line_to_process, ft_strlen(line_to_process));
-        write(pipe_fds[1], "\n", 1); // ¡Añadir el salto de línea!
-
-        free(line_to_process); // Libera la cadena line_to_process (strdup o expand_single_string)
-        free(line); // Libera la cadena original de readline
-    }
-    close(pipe_fds[1]); // Cierra el extremo de escritura del pipe
-    return (ret_fd); // Devuelve el extremo de lectura
+	new_cmd = (t_command *)ft_calloc(1, sizeof(t_command));
+	if (!new_cmd)
+	{
+		perror("minishell: malloc failed in create_command_node");
+		return (NULL);
+	}
+	new_cmd->args = NULL;
+	new_cmd->num_args = 0;
+	new_cmd->redirections = NULL;
+	new_cmd->num_redirections = 0;
+  new_cmd->full_path = NULL;
+	new_cmd->next = NULL;
+	new_cmd->prev = NULL;
+	return (new_cmd);
 }
 
-//Función principal del parser.
-t_command *parse_input(t_token *token_list, char **envp)
+// Crea un nuevo nodo de redirección.
+t_redirection	*create_redirection_node(t_redir_type type, char *file)
 {
-  t_command *head_cmd = NULL;
-  t_command *current_cmd = NULL;
-  t_command *temp;
-  t_redirection *new_redir;
-  t_token *current_token = token_list;
-  t_redir_type redir_enum_type;  // -- Declaración de la variable de mapeo.
+	t_redirection	*new_redir;
 
-  if (!token_list)
-    return (NULL);
-  while (current_token)
-  {
-    if (!current_cmd)
-    {
-      current_cmd = create_command_node();
-      if (!current_cmd)
-      {
-        free_tokens(token_list);
-        free_commands(head_cmd);
-        return (NULL);
-      }
-      current_cmd->heredoc_fd = -1;
-      current_cmd->heredoc_error = 0;
-      if (!head_cmd)
-        head_cmd = current_cmd;
-      else
-      {
-        temp = head_cmd;
-        while (temp->next)
-          temp = temp->next;
-        temp->next = current_cmd;
-      }
-    }
-    if (current_token->type == WORD)
-    {
-      if (add_arg_to_command(current_cmd, current_token->value) != 0)
-      {
-        free_tokens(token_list);
-        free_commands(head_cmd);
-        return (NULL);
-      }
-      current_token = current_token->next; 
-    }
-    else if (current_token->type >= IN && current_token->type <= HEREDOC) // Es una redirección
-    {
-      if   (!current_token->next || current_token->next->type == PIPE)
-      {
-         fprintf(stderr, "minishell: Syntax error near unexpected token '%s'\n",
-          current_token->next ? current_token->next->value : "newline");
-        free_tokens(token_list);
-        free_commands(head_cmd);
-        return (NULL);
-      }
-      if (current_token->next->type != WORD)
-      {
-        fprintf(stderr, "minishell: Syntax error near unexpected token '%s'\n",
-          current_token->next->value);
-        free_tokens(token_list);
-        free_commands(head_cmd);
-        return (NULL);
-      }
+	new_redir = (t_redirection *)ft_calloc(1, sizeof(t_redirection));
+	if (!new_redir)
+	{
+		perror("minishell: malloc failed in create_redirection_node");
+		return (NULL);
+	}
+	new_redir->type = type;
+	new_redir->file = ft_strdup(file);
+	if (!new_redir->file)
+	{
+		perror("minishell: ft_strdup failed in create_redirection_node");
+		free(new_redir);
+		return (NULL);
+	}
+  new_redir->heredoc_fd = -1;
+  new_redir->expand_heredoc_content = true;
+  new_redir->heredoc_error = false;
+	new_redir->next = NULL;
+	return (new_redir);
+}
 
-      if (current_token->type == IN)
-        redir_enum_type = REDIR_IN;
-      else if (current_token->type == OUT)
-        redir_enum_type = REDIR_OUT;
-      else if (current_token->type == APPE_OUT)
-        redir_enum_type = REDIR_APPEND;
-      else if (current_token->type == HEREDOC)
-        redir_enum_type = REDIR_HEREDOC;
-      else
-      {
-        fprintf(stderr, "minishell: Parser error: unknow redirection type\n");
-        free_tokens(token_list);
-        free_commands(head_cmd);
-        return (NULL);
-      }
-      char *file_name_or_delimiter = NULL;
-      bool expand_heredoc_content = false; // flag para heredoc
-      if (redir_enum_type == REDIR_HEREDOC)
-      {
-        char *raw_delimiter_token_value = current_token->next->value;
-        size_t len = ft_strlen(raw_delimiter_token_value);
+// Añade una redirection a la lista de redirecciones de un comando.
+void	add_redir_to_command(t_command *cmd, t_redirection *new_redir)
+{
+	t_redirection	*last_redir;
 
-        if (len > 1 && raw_delimiter_token_value[0] == '\'' && 
-            raw_delimiter_token_value[len - 1] == '\'')
-        {
-          file_name_or_delimiter = ft_substr(raw_delimiter_token_value, 1, len - 2);
-          expand_heredoc_content = false; // contenido no se expande
-        }
-        else if (len > 1 && raw_delimiter_token_value[0] == '"' &&  
-                  raw_delimiter_token_value[len - 1] == '"')
-        {
-          file_name_or_delimiter = ft_substr(raw_delimiter_token_value, 1, len - 2);
-          expand_heredoc_content = false;
-        }
-        else // Sin comillas
-        {
-          file_name_or_delimiter = expand_single_string(raw_delimiter_token_value, envp, g_last_exit_status);
-          expand_heredoc_content = true;
-        }
-        if (!file_name_or_delimiter) // ERROR MALLOC/EXPANSION
-        {
-          free_tokens(token_list);
-          free_commands(head_cmd);
-          return (NULL);
-        }
-        int fd_result = procces_heredoc_input(file_name_or_delimiter, expand_heredoc_content, envp);
-        free(file_name_or_delimiter);
-        if (fd_result == -1)
-        {
-          free(file_name_or_delimiter);
-          free_tokens(token_list);
-          free_commands(head_cmd);
-          return (NULL);
-        }
-        else if(fd_result == -2)
-        {
-          current_cmd->heredoc_error = -1;
-          if (current_cmd->heredoc_fd != -1)
-            close(current_cmd->heredoc_fd);
-          current_cmd->heredoc_fd = -1;
-        }
-        else
-        {
-          if (current_cmd->heredoc_fd != -1)
-            close(current_cmd->heredoc_fd);
-          current_cmd->heredoc_fd = fd_result;
-        }
-      }
-      else // PARA <, >, >>
-      {
-        // Para redirecciones, el fille es simplemente el valor del token
-        file_name_or_delimiter = ft_strdup(current_token->next->value);
-        if (!file_name_or_delimiter)
-        {
-          free_tokens(token_list);
-          free_commands(head_cmd);
-          return (NULL);
-        }
-        expand_heredoc_content = false;
-      }
-        // crear nodo new_redir una sola vez despues de procesar el valor.
-      new_redir = create_redirection_node(redir_enum_type, file_name_or_delimiter);
-      if (!new_redir)
-      {
-        free(file_name_or_delimiter); //liberar si falla la creación del nodo.
-        if (redir_enum_type == REDIR_HEREDOC && current_cmd->heredoc_fd != -1)
-        {
-          close(current_cmd->heredoc_fd);
-          current_cmd->heredoc_fd = -1;
-        }
-        free_tokens(token_list);
-        free_commands(head_cmd);
-        return (NULL);
-      }
-      // Asignar el flag solo para los heredocs 
-      new_redir->expand_heredoc_content = expand_heredoc_content;
-      add_redir_to_command(current_cmd, new_redir);
-      current_token = current_token->next->next; // Avanza el operador y el nombre del.
-    }
-    else if (current_token->type == PIPE)
-    {
-      if ((!current_cmd->args && !current_cmd->redirs) ||
-          (current_token->next && current_token->next->type == PIPE))
-      {
-        fprintf(stderr, "minishell: Syntax error near unexpected token '%s'\n", current_token->value);
-        free_tokens(token_list);
-        free_commands(head_cmd);
-        return (NULL);
-      }
-      if (!current_token->next)
-      {
-        fprintf(stderr, "minishell: Syntax error near unexpected token 'newline'\n");
-        free_tokens(token_list);
-        free_commands(head_cmd);
-        return (NULL);
-      }
-      current_cmd = NULL; // Pipe siempre indica el inicio de un nuevo comando.
-      current_token = current_token->next;
-    }
-    else
-    {
-      fprintf(stderr, "minishell: parser error: unexpected token type '%s'\n", current_token->value);
-      free_tokens(token_list);
-      free_commands(head_cmd);
-      return(NULL);
-    }
-  }
-  return (head_cmd);
+	if (!cmd || !new_redir)
+		return ;
+	if (!cmd->num_redirections)
+	{
+		cmd->redirections = new_redir;
+	}
+	else
+	{
+		last_redir = cmd->redirections;
+		while (last_redir->next)
+			last_redir = last_redir->next;
+		last_redir->next = new_redir;
+	}
+	cmd->num_redirections++;
+}
+
+// Auxiliar para add_arg_to_command: asigna memoria para el nuevo array de argumentos.
+static char	**allocate_new_args(t_command *cmd)
+{
+	char	**new_args;
+	int		i;
+
+	new_args = (char **)ft_calloc(cmd->num_args + 2, sizeof(char *));
+	if (!new_args)
+	{
+		perror("minishell: malloc failed for new_args");
+		return (NULL);
+	}
+	i = -1;
+	while (++i < cmd->num_args)
+		new_args[i] = cmd->args[i];
+	return (new_args);
+}
+
+//Añade un argumento a la lista de argumentos de un commando.
+int	add_arg_to_command(t_command *cmd, const char *arg)
+{
+	char	**new_args;
+
+	if (!cmd || !arg)
+		return (1);
+	new_args = allocate_new_args(cmd);
+	if (!new_args)
+		return (0);
+	new_args[cmd->num_args] = ft_strdup(arg);
+	if (!new_args[cmd->num_args])
+	{
+		perror("minishell: ft_strdup failed for new arg");
+		free(new_args);
+		return (0);
+	}
+	new_args[cmd->num_args + 1] = NULL;
+	if (cmd->args)
+		free(cmd->args);
+	cmd->args = new_args;
+	cmd->num_args++;
+	return (1);
+}
+
+// Funcion para limpiar en caso de error de parsing.
+static t_command	*handle_parse_error(t_command *cmd_list_head, t_struct *mini)
+{
+	if (cmd_list_head)
+		free_commands(cmd_list_head);
+	mini->last_exit_status = 258;
+	return (NULL);
+}
+
+//Auxiliar para proccess_redirection: obtiene el tipo de redireccion.
+static t_redir_type	get_redirection_type(t_token *token)
+{
+	if (ft_strncmp(token->value, "<", 2) == 0)
+		return (REDIR_IN);
+	else if (ft_strncmp(token->value, ">", 2) == 0)
+		return (REDIR_OUT);
+	else if (ft_strncmp(token->value, ">>", 3) == 0)
+		return (REDIR_APPEND);
+	else if (ft_strncmp(token->value, "<<", 3) == 0)
+		return (REDIR_HEREDOC);
+	return ((t_redir_type)-1); // inválido
+}
+
+//Procesa un token de redireccion.
+static t_token	*process_redirection(t_token *current_token,
+		t_command *current_cmd, t_struct *mini, t_command *cmd_head)
+{
+	t_redir_type	type;
+	t_redirection	*new_redir;
+
+	if (!current_token || !current_token->next
+		|| current_token->next->type != WORD)
+	{
+		fprintf(stderr, "minishell: syntax error near unexpected token `%s`\n",
+			current_token ? current_token->value : "newline");
+		return (handle_parse_error(cmd_head, mini));
+	}
+	type = get_redirection_type(current_token);
+	if (type == (t_redir_type)-1)
+		return (handle_parse_error(cmd_head, mini));
+	new_redir = create_redirection_node(type, current_token->next->value);
+	if (!new_redir)
+		return (handle_parse_error(cmd_head, mini));
+	add_redir_to_command(current_cmd, new_redir);
+	return (current_token->next->next);
+}
+
+//Procesa un token de tipo WORD (argumento o comando)
+static t_token	*process_word(t_token *current_token, t_command *current_cmd,
+		t_struct *mini, t_command *cmd_head)
+{
+	if (!add_arg_to_command(current_cmd, current_token->value))
+	{
+		return (handle_parse_error(cmd_head, mini)); // Error malloc.
+	}
+	return (current_token->next);
+}
+
+//Procesa un token PIPE.
+static t_command	*process_pipe(t_token *current_token,
+		t_command *current_cmd, t_struct *mini, t_command *cmd_head)
+{
+	t_command	*new_cmd;
+
+	if (!current_token->next) // Pipe sin comando después
+	{
+		fprintf(stderr, "minishell: syntax error near unexpected token `|`\n");
+		return (handle_parse_error(cmd_head, mini));
+	}
+	new_cmd = create_command_node();
+	if (!new_cmd)
+		return (handle_parse_error(cmd_head, mini));
+	current_cmd->next = new_cmd;
+	new_cmd->prev = current_cmd;
+	return (new_cmd);
+}
+
+// Decide como procesar el token actual y avanza un puntero de token o comando.
+static t_token	*process_token_node(t_token *current_token, t_command **current_cmd,
+				t_struct *mini, t_command *cmd_head, t_token *token_list)
+{
+	if (current_token->type == WORD)
+		return (process_word(current_token, *current_cmd, mini, cmd_head));
+	else if (current_token->type == IN || current_token->type == OUT
+		|| current_token->type == APPE_OUT || current_token->type == HEREDOC)
+		return (process_redirection(current_token, *current_cmd, mini, cmd_head));
+	else if (current_token->type == PIPE)
+	{
+		*current_cmd = process_pipe(current_token, *current_cmd, mini, cmd_head);
+		return (current_token->next);
+	}
+	return (handle_parse_error(cmd_head, mini));
+}
+
+//Función principal de parsing.
+t_command	*parse_input(t_token *token_list, t_struct *mini)
+{
+	t_command	*cmd_head;
+	t_command	*current_cmd;
+	t_token		*current_token;
+
+	if (!token_list)
+		return (NULL);
+	cmd_head = create_command_node();
+	if (!cmd_head)
+		return (handle_parse_error(NULL, mini));
+	current_cmd = cmd_head;
+	current_token = token_list;
+	while (current_token)
+	{
+		current_token = process_token_node(current_token, &current_cmd, mini, cmd_head, token_list);
+		if (!current_token && cmd_head && mini->last_exit_status == 0)
+			break;
+		if (!current_token && mini->last_exit_status != 0)
+			return (NULL);
+	}
+	return (cmd_head);
+}
+
+// Libera argumentos de un comando.
+static void	free_args(char **args)
+{
+	int	i;
+
+	if (!args)
+		return;
+	i = 0;
+	while (args[i])
+	{
+		free(args[i]);
+		i++;
+	}
+	free(args);
+}
+
+// Libera la lista de redirecciones de un comando.
+static void	free_redirections(t_redirection *redir)
+{
+	t_redirection	*next_redir;
+
+	while (redir)
+	{
+		next_redir = redir->next;
+		if (redir->file)
+			free(redir->file);
+		if (redir->type == REDIR_HEREDOC && redir->heredoc_fd != -1)
+			close(redir->heredoc_fd);
+		free(redir);
+		redir = next_redir;
+	}
+}
+
+// Recorrre la lista de comandos y llama a las funciones auxiliares.
+void	free_commands(t_command *head)
+{
+	t_command	*cmd_tmp;
+
+	while (head)
+	{
+		cmd_tmp = head;
+		head = head->next;
+		free_args(cmd_tmp->args);
+		free_redirections(cmd_tmp->redirections);
+		if (cmd_tmp->full_path)
+			free(cmd_tmp->full_path);
+		free(cmd_tmp);
+	}
+}
+
+int	proccess_heredoc_input(t_command *cmd, t_struct *mini)
+{
+	(void)cmd;
+	(void)mini;
+	return (0);
+}
+
+int	handle_redirecctions_in_child(t_command *cmd)
+{
+	(void)cmd;
+	return (0);
 }

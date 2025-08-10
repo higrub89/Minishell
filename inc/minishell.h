@@ -42,7 +42,7 @@ typedef enum e_redir_type
   REDIR_IN,     // <
   REDIR_OUT,    // >
   REDIR_APPEND, // >>
-  REDIR_HEREDOC // <<
+  REDIR_HEREDOC, // <<
 } t_redir_type;
 
 // Estructura para las redirecciones.
@@ -60,8 +60,12 @@ typedef struct s_redirection
 typedef struct s_command
 {
   char    **args;
-  t_redirection *redirs;
+  int num_args;
+  t_redirection *redirections;
+  int num_redirections;
+  char *full_path;
   struct s_command *next;
+  struct s_command *prev;
 } t_command;
 
 typedef struct s_minishell
