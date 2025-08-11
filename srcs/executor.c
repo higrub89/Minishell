@@ -1,9 +1,4 @@
 #include "../inc/executor.h"
-#include "../inc/expander.h"
-#include "../inc/parser.h"
-#include "../libft/inc/libft.h"
-
-extern int g_last_exit_status;
 
 static char **get_paths(char **envp)
 {
@@ -68,6 +63,277 @@ static void free_str_array(char **arr)
         i++;
     }
     free(arr);
+}
+
+
+// ----- Redirection halding ------
+
+// Handles a single redirection, returning the opened file descriptor.
+static int open_redirection_file(t_redirection *redir)
+{
+    if (redir->type == REDIR_IN)
+        return (open(redir->file, O_RDONLY));
+    else if (redir->type == REDIR_OUT)
+        return (open(redir->file, O_WRONLY | O_CREAT | O_TRUNC, 0644));
+    else if (redir->type == REDIR_APPEND)
+        return (open(redir->file, O_WRONLY | O_CREAT | O_APPEND, 0644));
+    return (-1); // Should not happen for valid types
+}
+
+// Duplicates file descriptor to standard stream and closes original.
+static int dup2_and_close(int oldfd, int newfd)
+{
+    if (dup2(oldfd, newfd) == -1)
+    {
+        perror("minishell: dup2");
+        close(oldfd); // Ensure oldfd is closed on error
+        return (1);
+    }
+    close(oldfd);
+    return (0);
+}
+
+// Handles all redirections for a command in the child process.
+int handle_redirections_in_child(t_command *cmd)
+{
+    t_redirection *redir;
+    int fd;
+
+    // Heredoc input
+    if (cmd->heredoc_fd != -1)
+    {
+        if (dup2_and_close(cmd->heredoc_fd, STDIN_FILENO) != 0)
+            return (1);
+    }
+
+    redir = cmd->redirections;
+    while (redir)
+    {
+        if (redir->type == REDIR_HEREDOC) // Already handled above
+        {
+            redir = redir->next;
+            continue;
+        }
+        fd = open_redirection_file(redir);
+        if (fd == -1)
+        {
+            perror(redir->file); // Error opening file
+            return (1);
+        }
+        if (redir->type == REDIR_IN)
+        {
+            if (dup2_and_close(fd, STDIN_FILENO) != 0) return (1);
+        }
+        else // REDIR_OUT or REDIR_APPEND
+        {
+            if (dup2_and_close(fd, STDOUT_FILENO) != 0) return (1);
+        }
+        redir = redir->next;
+    }
+    return (0);
+}
+
+// --- Child Process Specific Logic ---
+
+// Sets up pipe redirections for the child process.
+static void setup_child_pipes(t_command *cmd, int *pipe_fds, int prev_pipe_in_fd)
+{
+    // Configure STDIN from previous pipe if applicable
+    if (prev_pipe_in_fd != -1)
+    {
+        if (dup2_and_close(prev_pipe_in_fd, STDIN_FILENO) != 0)
+            exit(1); // Exit if dup2 fails
+    }
+    // Configure STDOUT to current pipe if applicable
+    if (cmd->next)
+    {
+        if (dup2_and_close(pipe_fds[1], STDOUT_FILENO) != 0)
+            exit(1); // Exit if dup2 fails
+    }
+    // Close unused pipe ends in child
+    if (cmd->next)
+    {
+        close(pipe_fds[0]); // Read end of current pipe is not used by this child
+    }
+}
+
+
+// Executes a command in the child process.
+static void child_execute_command(t_command *cmd, t_struct *mini)
+{
+    char **paths;
+    char *cmd_path;
+
+    if (handle_redirections_in_child(cmd) != 0)
+        exit(1); // Exit child on redirection error
+
+    if (!cmd->args || !cmd->args[0]) // Empty command (e.g., just redirections)
+        exit(0);
+
+    // Builtin check. If it's a builtin, execute it and exit.
+    if (is_builtin(cmd->args[0]))
+    {
+        execute_builtin(cmd, mini); // This should update mini->last_exit_status
+        exit(mini->last_exit_status);
+    }
+    
+    // External command execution
+    paths = get_paths(mini->envp);
+    cmd_path = find_cmd_path(cmd->args[0], paths);
+
+    if (!cmd_path)
+    {
+        fprintf(stderr, "minishell: %s: command not found\n", cmd->args[0]);
+        free_str_array(paths);
+        exit(127); // Command not found
+    }
+    execve(cmd_path, cmd->args, mini->envp);
+    // If execve returns, it failed
+    perror("minishell: execve");
+    free(cmd_path);
+    free_str_array(paths);
+    exit(126); // Command not executable
+}
+
+// Performs pipe and heredoc cleanup in the parent process after a fork.
+static void parent_cleanup(t_command *cmd, int *pipe_fds, int *prev_pipe_in_fd,
+                            pid_t child_pid, pid_t *child_pids, int cmd_idx)
+{
+    child_pids[cmd_idx] = child_pid; // Store child PID
+    if (*prev_pipe_in_fd != -1)
+        close(*prev_pipe_in_fd); // Close read end of previous pipe
+    if (cmd->next)
+    {
+        close(pipe_fds[1]); // Close write end of current pipe
+        *prev_pipe_in_fd = pipe_fds[0]; // Read end becomes input for next
+    }
+    else // Last command in pipe
+    {
+        if (*prev_pipe_in_fd != -1)
+            close(*prev_pipe_in_fd); // Close final pipe input
+        *prev_pipe_in_fd = -1;
+    }
+    // Close heredoc_fd in parent (child already duplicated or ignored it)
+    if (cmd->heredoc_fd != -1)
+    {
+        close(cmd->heredoc_fd);
+        cmd->heredoc_fd = -1; // Mark as closed
+    }
+}
+
+
+// Waits for all child processes and updates last_exit_status.
+static void wait_for_children(pid_t *child_pids, int num_commands, t_struct *mini)
+{
+    int status;
+    int i;
+
+    i = 0;
+    while (i < num_commands)
+    {
+        waitpid(child_pids[i], &status, 0);
+        if (i == num_commands - 1) // Only last command's status matters for minishell exit status
+        {
+            if (WIFEXITED(status))
+                mini->last_exit_status = WEXITSTATUS(status);
+            else if (WIFSIGNALED(status))
+                mini->last_exit_status = 128 + WTERMSIG(status);
+        }
+        i++;
+    }
+    free(child_pids);
+}
+
+// Initializes pipeline variables and allocates PIDs array.
+static int init_pipeline(t_command *commands, pid_t **child_pids_ptr)
+{
+    t_command *current_cmd;
+    int num_commands;
+
+    num_commands = 0;
+    current_cmd = commands;
+    while (current_cmd)
+    {
+        num_commands++;
+        current_cmd = current_cmd->next;
+    }
+    *child_pids_ptr = ft_calloc(num_commands + 1, sizeof(pid_t));
+    if (!*child_pids_ptr)
+    {
+        perror("minishell: calloc child_pids");
+        return (-1); // Indicate error
+    }
+    return (num_commands);
+}
+
+// Handles fork errors, cleaning up resources.
+static void handle_fork_error(int prev_pipe_in_fd, int *pipe_fds,
+                               t_command *current_cmd, pid_t *child_pids, t_struct *mini)
+{
+    perror("minishell: fork");
+    mini->last_exit_status = 1;
+    if (prev_pipe_in_fd != -1)
+        close(prev_pipe_in_fd);
+    if (current_cmd && current_cmd->next)
+    {
+        close(pipe_fds[0]);
+        close(pipe_fds[1]);
+    }
+    free(child_pids);
+}
+
+// Main function to execute a list of commands (pipeline).
+int execute_commands(t_command *commands, t_struct *mini)
+{
+    t_command   *current_cmd;
+    pid_t       pid;
+    int         pipe_fds[2];
+    int         prev_pipe_in_fd;
+    pid_t       *child_pids;
+    int         num_commands;
+    int         cmd_idx;
+
+    prev_pipe_in_fd = -1;
+    num_commands = init_pipeline(commands, &child_pids);
+    if (num_commands == -1)
+    {
+        mini->last_exit_status = 1; // Set status for malloc error
+        return (1);
+    }
+    
+    cmd_idx = 0;
+    current_cmd = commands;
+    while (current_cmd)
+    {
+        if (current_cmd->next && pipe(pipe_fds) == -1) // Create pipe if needed
+        {
+            perror("minishell: pipe");
+            mini->last_exit_status = 1;
+            free(child_pids);
+            return (1);
+        }
+
+        pid = fork();
+        if (pid == -1)
+        {
+            handle_fork_error(prev_pipe_in_fd, pipe_fds, current_cmd, child_pids, mini);
+            return (1);
+        }
+        else if (pid == 0) // Child process
+        {
+            setup_child_pipes(current_cmd, pipe_fds, prev_pipe_in_fd);
+            child_execute_command(current_cmd, mini); // This function handles execution and exits
+        }
+        else // Parent process
+        {
+            parent_cleanup(current_cmd, pipe_fds, &prev_pipe_in_fd, pid, child_pids, cmd_idx);
+            cmd_idx++;
+        }
+        current_cmd = current_cmd->next;
+    }
+
+    wait_for_children(child_pids, num_commands, mini);
+    return (0);
 }
 
 // Función para ejecutar comandos

@@ -10,11 +10,8 @@
 /* */
 /* ************************************************************************** */
 
-#include "../inc/expander.h" // Asegúrate de que esta cabecera incluye t_string_builder y sus definiciones
-#include "../libft/inc/libft.h" // Asumo que libft.h tiene ft_strlen, ft_memcpy, ft_strdup, ft_substr, ft_itoa, ft_isdigit, ft_isalpha, ft_isalnum, ft_calloc, free
+#include "../inc/expander.h"
 
-// Variable global para el estado de salida del último comando
-extern int g_last_exit_status; 
 
 // --- Funciones de String Builder ---
 
@@ -22,12 +19,11 @@ extern int g_last_exit_status;
 static void ft_sb_init(t_string_builder *sb)
 {
     sb->length = 0;
-    sb->capacity = INITIAL_SB_CAPACITY; // Asegúrate de que INITIAL_SB_CAPACITY está definido en expander.h (ej. #define INITIAL_SB_CAPACITY 128)
+    sb->capacity = INITIAL_SB_CAPACITY; 
     sb->buffer = (char *)ft_calloc(sb->capacity, sizeof(char));
     if (!sb->buffer)
     {
         sb->capacity = 0;
-        // Podrías setear un flag de error o g_last_exit_status aquí si lo consideras fatal.
     }
 }
 
@@ -102,222 +98,212 @@ static char* ft_sb_build(t_string_builder *sb)
 // --- Funciones de Expansión ---
 
 // Obtiene el valor de una variable de entorno
-static char *get_env_value(const char *name, char **envp)
-{
-    size_t name_len = ft_strlen(name);
-    if (name_len == 0) // Si el nombre de la variable es vacío, no hay valor.
-        return (NULL);
-    while(*envp)
-    {
-        // Compara el nombre de la variable y verifica que el siguiente carácter sea '='
-        if (ft_strncmp(*envp, name, name_len) == 0 && (*envp)[name_len] == '=')
-            return (*envp + name_len + 1); // Retorna el puntero al valor
-        envp++;
-    }
-    return (NULL); // Variable no encontrada
-}
-
-// Función principal para expandir una cadena única (dentro o fuera de comillas dobles)
-// ESTA FUNCIÓN ES PURA: SOLO EXPANDIRÁ '$' y '?' si los encuentra.
-// No se preocupa por las comillas externas; eso lo maneja `expand_variables`.
-char *expand_single_string(char *original_str, char **envp, int last_exit_status)
+static char *get_env_value(const char *name, t_struct *mini)
 {
     int i;
-    
-    if (!original_str)
-        return (ft_strdup("")); // Retorna una cadena vacía para NULL
+    int len;
 
-    t_string_builder sb;
-    ft_sb_init(&sb);
-    if (!sb.buffer) // Error en la inicialización del buffer
-        return (NULL); 
+    if (!name || !mini || !mini->envp)
+        return (ft_strdup(""));
+    if (ft_strncmp(name, "?", 2) == 0) // Special case for $?
+        return (ft_itoa(mini->last_exit_status));
     
+    len = ft_strlen(name);
     i = 0;
-    while (original_str[i]) // Recorre la cadena carácter a carácter
-    {   
-        if (original_str[i] == '$')
+    while (mini->envp[i])
+    {
+        if (ft_strncmp(mini->envp[i], name, len) == 0 && mini->envp[i][len] == '=')
+            return (ft_strdup(mini->envp[i] + len + 1));
+        i++;
+    }
+    return (ft_strdup("")); // Variable not found, returns empty string
+}
+
+
+static char *extract_and_get_value(const char *s, int *start_of_var_idx, t_struct *mini)
+{
+    int temp_i;
+    char *var_name;
+    char *var_value;
+
+    temp_i = *start_of_var_idx;
+    while (s[temp_i] && (ft_isalnum(s[temp_i]) || s[temp_i] == '_'))
+        temp_i++;
+    var_name = ft_substr(s, *start_of_var_idx, temp_i - *start_of_var_idx);
+    if (!var_name) return (NULL); // Malloc error
+    var_value = get_env_value(var_name, mini);
+    free(var_name); // Free the extracted variable name
+    *start_of_var_idx = temp_i; // Update index for main loop
+    return (var_value);
+}
+
+// Handles special dollar expansions like $? or $0.
+static void handle_special_dollar(t_string_builder *sb, const char *s,
+                int *i, t_struct *mini)
+{
+    char *var_value;
+
+    if (s[*i + 1] == '?')
+    {
+        var_value = get_env_value("?", mini);
+        if (var_value)
         {
-            i++; // Avanza más allá del '$'
-            if (original_str[i] == '?') // Expansión de $? (exit status)
-            {
-                char *exit_str = ft_itoa(last_exit_status);
-                if (!exit_str)
-                {
-                    ft_sb_build(&sb); // Limpiar builder si falla itoa
-                    return (NULL);
-                }
-                ft_sb_append_str(&sb, exit_str);
-                free(exit_str); // Liberar la cadena de itoa
-                i++; // Avanza más allá del '?'
-            }
-            else if (ft_isdigit(original_str[i])) // Expansión de $0, $1, etc. (parámetros posicionales)
-            {
-                // Según el sujeto, no necesitas implementar $1, $2, etc.
-                // Bash los ignora o los usa para parámetros del script.
-                // Aquí, simplemente los pasamos literalmente, o podrías ignorarlos.
-                ft_sb_append_char(&sb, '$'); // Mantener el '$'
-                ft_sb_append_char(&sb, original_str[i]); // Mantener el dígito
-                i++;
-            }
-            else if(ft_isalpha(original_str[i]) || original_str[i] == '_') // Expansión de variables alfanuméricas (ej. $USER, $HOME)
-            {
-                int start = i; // Guarda el inicio del nombre de la variable
-                while (ft_isalnum(original_str[i]) || original_str[i] == '_')
-                    i++; // Avanza mientras sea un carácter válido de nombre de variable
-                char *var_name = ft_substr(original_str, start, i - start);
-                if (!var_name)
-                {
-                    ft_sb_build(&sb);
-                    return (NULL);
-                }
-                char *var_value = get_env_value(var_name, envp);
-                if (var_value) // Si la variable existe, añadir su valor
-                    ft_sb_append_str(&sb, var_value);
-                // Si var_value es NULL (variable no definida), no se añade nada (se expande a vacío).
-                free(var_name); // Liberar el nombre de la variable extraído
-            }
-            else if (original_str[i] == '\0') // '$' al final de la cadena (ej. "hola$")
-            {
-                ft_sb_append_char(&sb, '$'); // Mantener el '$' literal
-            }
-            else // Carácter después de '$' que no es ?, dígito, letra o _
-            {
-                ft_sb_append_char(&sb, '$'); // Mantener el '$' literal
-                ft_sb_append_char(&sb, original_str[i]); // Mantener el carácter literal
-                i++;
-            }
+            ft_sb_append_str(sb, var_value);
+            free(var_value);
         }
-        else // Carácter normal, no es '$'
+        (*i) += 2; // Move past $?
+    }
+    else if (ft_isdigit(s[*i + 1])) // $0, $1, etc. (positional parameters)
+    {
+        // For minishell, usually $0 is the shell name, $1+ are ignored.
+        // We append '$' and the digit literally as per usual behavior.
+        ft_sb_append_char(sb, '$');
+        ft_sb_append_char(sb, s[*i + 1]);
+        (*i) += 2; // Move past $ and digit
+    }
+    else // Literal '$' (e.g., $ followed by non-var char, or just $)
+    {
+        ft_sb_append_char(sb, s[*i]); // Append the '$' literally
+        (*i)++;
+    }
+}
+
+// Handles alphanumeric dollar expansions ($VAR).
+static void handle_alphanum_dollar(t_string_builder *sb, const char *s,
+                int *i, t_struct *mini)
+{
+    char *var_value;
+    int  start_of_var;
+
+    start_of_var = *i + 1; // Position after '$'
+    var_value = extract_and_get_value(s, &start_of_var, mini);
+    if (var_value) // If value was found (even if empty string)
+    {
+        ft_sb_append_str(sb, var_value);
+        free(var_value);
+    }
+    *i = start_of_var; // Update main iterator
+}
+
+// Orchestrates dollar sign expansion.
+static void process_dollar_expansion(t_string_builder *sb, const char *s,
+                int *i, t_struct *mini, char current_quote_char)
+{
+    if (current_quote_char == '\'') // Inside single quotes, no expansion
+    {
+        ft_sb_append_char(sb, s[*i]); // Append '$' literally
+        (*i)++;
+        return;
+    }
+    
+    // Check for potential variable after '$'
+    if (s[*i + 1] == '?' || ft_isdigit(s[*i + 1]))
+        handle_special_dollar(sb, s, i, mini);
+    else if (ft_isalpha(s[*i + 1]) || s[*i + 1] == '_')
+        handle_alphanum_dollar(sb, s, i, mini);
+    else // '$' followed by whitespace, null terminator, or other non-var char
+    {
+        ft_sb_append_char(sb, s[*i]); // Append '$' literally
+        (*i)++;
+    }
+}
+
+// --- Main Expansion Logic ---
+
+// Expands variables and removes all quotes from a string.
+// This function receives the string AS-IS from the parser (with quotes).
+char *expand_string(char *original_str, t_struct *mini)
+{
+    t_string_builder sb;
+    int     i;
+    char    current_quote_char; // 0 for no quote, '\'' or '\"'
+
+    if (!original_str)
+        return (ft_strdup("")); // Return empty string for NULL input
+
+    ft_sb_init(&sb);
+    if (!sb.buffer) return (NULL); // Malloc failure
+
+    i = 0;
+    current_quote_char = 0;
+    while (original_str[i])
+    {
+        if (original_str[i] == '\'' || original_str[i] == '\"')
+        {
+            if (current_quote_char == original_str[i]) // Closing quote
+                current_quote_char = 0;
+            else if (current_quote_char == 0) // Opening quote
+                current_quote_char = original_str[i];
+            i++; // Skip the quote char itself
+            continue;
+        }
+        
+        if (original_str[i] == '$' && original_str[i+1])
+            process_dollar_expansion(&sb, original_str, &i, mini, current_quote_char);
+        else // Regular character, or '$' at end of string
         {
             ft_sb_append_char(&sb, original_str[i]);
             i++;
         }
     }
-    return (ft_sb_build(&sb)); // Construye y retorna la cadena final
+    return (ft_sb_build(&sb));
 }
 
-// NUEVA FUNCIÓN AUXILIAR para quitar las comillas externas
-// y determinar si el contenido de la cadena debe ser expandido.
-// Retorna una cadena nueva (strdup o substr) que el llamador debe liberar.
-// `do_expand` es una bandera de salida que indica si el contenido debe expandirse.
-static char *unquote_and_determine_expansion(char *raw_str, bool *do_expand)
-{
-    size_t len = ft_strlen(raw_str);
-
-    // Caso: Cadena entre comillas simples (ej. "'$USER'")
-    // El lexer debe asegurar que la cadena completa llegue aquí, incluyendo las comillas.
-    if (len >= 2 && raw_str[0] == '\'' && raw_str[len - 1] == '\'')
-    {
-        *do_expand = false; // Contenido **NO** se expande
-        return ft_substr(raw_str, 1, len - 2); // Devuelve el contenido sin las comillas
-    }
-    // Caso: Cadena entre comillas dobles (ej. ""$USER"")
-    else if (len >= 2 && raw_str[0] == '"' && raw_str[len - 1] == '"')
-    {
-        *do_expand = true; // Contenido **SÍ** se expande
-        return ft_substr(raw_str, 1, len - 2); // Devuelve el contenido sin las comillas
-    }
-    // Caso: Sin comillas o comillas mal formadas/mezcladas
-    // Aquí, asumimos que el contenido **SÍ** se expande, como en Bash.
-    else
-    {
-        *do_expand = true; 
-        return ft_strdup(raw_str); // Devuelve una copia tal cual (se necesita una copia propia para expand_single_string)
-    }
-}
-
-// Función que recorre la lista de comandos y sus argumentos/redirecciones
-// para aplicar la expansión de variables.
-void expand_variables(t_command *commands, char **envp, int *last_exit_status_ptr)
+// Iterates through all commands and expands their arguments and redirections.
+void expand_commands(t_command *cmd_list, t_struct *mini)
 {
     t_command       *current_cmd;
     t_redirection   *current_redir;
-    char            *processed_str;       // Cadena después de quitar comillas externas
-    char            *final_str;           // Cadena final después de la expansión
-    bool            should_expand_content; // Bandera para controlar si se llama a expand_single_string
+    char            *expanded_str;
     int             i;
 
-    current_cmd = commands;
-    while (current_cmd) // Recorrer cada comando en la pipeline
+    current_cmd = cmd_list;
+    while (current_cmd)
     {
-        // 1. Expandir argumentos del comando
-        if (current_cmd->args)
+        i = 0;
+        while (current_cmd->args && current_cmd->args[i])
         {
-            i = 0;
-            while (current_cmd->args[i])
+            expanded_str = expand_string(current_cmd->args[i], mini);
+            if (!expanded_str) // Malloc error
             {
-                // Paso A: "Descomillar" el argumento y decidir si su contenido se expande
-                processed_str = unquote_and_determine_expansion(current_cmd->args[i], &should_expand_content);
-                if (!processed_str) // Manejo de error de malloc
-                {
-                    *last_exit_status_ptr = 1; // Setear código de error
-                    return; // Podrías necesitar un manejo de errores más sofisticado aquí
-                }
-
-                // Paso B: Si se debe expandir, llamar a expand_single_string
-                if (should_expand_content)
-                {
-                    final_str = expand_single_string(processed_str, envp, *last_exit_status_ptr);
-                    free(processed_str); // Liberar la cadena temporal `processed_str`
-                }
-                else
-                {
-                    // Si no se expande, `processed_str` ya es la cadena final.
-                    final_str = processed_str; // `final_str` ahora apunta a `processed_str`
-                }
-                
-                if (!final_str) // Manejo de error de malloc en expansión o copia
-                {
-                    *last_exit_status_ptr = 1;
-                    return;
-                }
-                
-                // Reemplazar el argumento original con la cadena final (expandida o literal)
-                free(current_cmd->args[i]);
-                current_cmd->args[i] = final_str;
-                i++;
+                mini->last_exit_status = 1; // Indicate memory error
+                return; // Stop processing further commands on error
             }
+            free(current_cmd->args[i]);
+            current_cmd->args[i] = expanded_str;
+            i++;
         }
         
-        // 2. Expandir nombres de archivo en redirecciones (excepto heredoc)
-        current_redir = current_cmd->redirs;
+        current_redir = current_cmd->redirections;
         while (current_redir)
         {
-            // La lógica del delimitador de HEREDOC y su expansión ya se maneja en `parser.c`
-            // en `procces_heredoc_input`. Por eso, excluimos `REDIR_HEREDOC` aquí.
+            // Only expand file names for regular redirections (<, >, >>)
+            // Heredoc delimiters (<<) are NOT expanded here. Their content is handled separately.
             if (current_redir->type != REDIR_HEREDOC)
             {
-                // Paso A: "Descomillar" el nombre de archivo y decidir si se expande
-                processed_str = unquote_and_determine_expansion(current_redir->file, &should_expand_content);
-                if (!processed_str)
+                expanded_str = expand_string(current_redir->file, mini);
+                if (!expanded_str)
                 {
-                    *last_exit_status_ptr = 1;
+                    mini->last_exit_status = 1;
                     return;
                 }
-
-                // Paso B: Si se debe expandir, llamar a expand_single_string
-                if (should_expand_content)
-                {
-                    final_str = expand_single_string(processed_str, envp, *last_exit_status_ptr);
-                    free(processed_str);
-                }
-                else
-                {
-                    final_str = processed_str;
-                }
-                
-                if (!final_str)
-                {
-                    *last_exit_status_ptr = 1;
-                    return;
-                }
-                
-                // Reemplazar el nombre de archivo original con la cadena final
                 free(current_redir->file);
-                current_redir->file = final_str;
+                current_redir->file = expanded_str;
             }
             current_redir = current_redir->next;
         }
-        current_cmd = current_cmd->next; // Pasar al siguiente comando en la lista
+        current_cmd = current_cmd->next;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
