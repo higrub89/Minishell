@@ -1,74 +1,122 @@
 #include "../inc/executor.h"
 
-static char **get_paths(char **envp)
+static void	add_slash_to_paths(char **paths)
 {
-    int i = 0;
-    while(envp[i])
+	int		i;
+	char	*tmp;
+	size_t	len;
+
+	i = 0;
+	while (paths && paths[i])
+	{
+		len = ft_strlen(paths[i]);
+		if (paths[i][len - 1] != '/')
+		{
+			tmp = ft_strjoin(paths[i], "/");
+			if (!tmp)
+			{
+				perror("minishell: malloc error in add_slash_to_path");
+				return ;
+			}
+			free(paths[i]);
+			paths[i] = tmp;
+		}
+		i++;
+	}
+}
+
+char    **get_paths(char **envp)
+{
+    int     i;
+    char    *path_var;
+    char    **paths;
+
+    i = 0;
+    path_var = NULL;
+    while (envp && envp[i])
     {
         if (ft_strncmp(envp[i], "PATH=", 5) == 0)
         {
-            return (ft_split(envp[i] + 5, ':'));
+            path_var = envp[i] + 5;
+            break ;
         }
         i++;
     }
-    return (ft_split("/bin:/usr/bin", ':'));
+    if (!path_var || *path_var == '\0') 
+    {
+        paths = ft_split("/usr/local/bin:/usr/bin:/bin", ':'); // O solo "/bin:/usr/bin"
+        if (!paths) // Manejo de error para ft_split
+            return (NULL);
+        add_slash_to_paths(paths);
+        return (paths);
+    }
+    paths = ft_split(path_var, ':');
+    if (!paths) // Manejo de error para ft_split
+        return (NULL);
+    add_slash_to_paths(paths);
+    return (paths);
 }
 
-static char *find_cmd_path(const char *cmd, char **paths)
+static char	*check_direct_path(char *cmd)
 {
-    char *full_path;
-    char *temp_path;
-    int i;
+	if (access(cmd, X_OK) == 0)
+		return (ft_strdup(cmd));
+	return (NULL);
+}
 
-    if (!cmd)
-        return (NULL);
+char	*find_cmd_path(char **cmd_args, char **paths)
+{
+	int		i;
+	char	*full_path;
 
-    if (ft_strchr(cmd, '/') != NULL)
-    {
-        if (access(cmd, X_OK) == 0)
-            return (ft_strdup(cmd));
-        return (NULL);
-    }
-    if (!paths)
-        return (NULL);
-
-    i = 0;
-    while (paths[i])
-    {
-        temp_path = ft_strjoin(paths[i], "/");
-        if (!temp_path)
-            return (NULL);
-        full_path = ft_strjoin(temp_path, cmd);
-        free(temp_path);
+	if (!cmd_args || !cmd_args[0])
+		return (NULL);
+	if (ft_strchr(cmd_args[0], '/'))
+		return (check_direct_path(cmd_args[0]));
+	if (!paths)
+		return (NULL);
+	i = 0;
+	while (paths[i])
+	{
+		full_path = ft_strjoin(paths[i], cmd_args[0]);
         if (!full_path)
             return (NULL);
-        if (access(full_path, X_OK) == 0)
-            return (full_path);
-        free(full_path);
-        i++;
-    }
-    return (NULL);
+		if (access(full_path, X_OK) == 0)
+			return (full_path);
+		free(full_path);
+		i++;
+	}
+	return (NULL);
 }
 
-static void free_str_array(char **arr)
+void	free_str_array(char **arr)
 {
-    if (!arr)
-        return;
-    int i;
+	int	i;
 
-    i = 0;
-    while (arr[i])
-    {
-        free(arr[i]);
-        i++;
-    }
-    free(arr);
+	i = 0;
+	if (!arr)
+		return ;
+	while (arr[i])
+		free(arr[i++]);
+	free(arr);
 }
 
+// Duplicates file descriptor to standard stream and closes original.
+static int dup2_and_close(int oldfd, int newfd)
+{
+    if (oldfd == newfd) // Already the same, no need to dup2
+        return (0);
+    if (dup2(oldfd, newfd) == -1)
+    {
+        perror("minishell: dup2");
+        close(oldfd); // Ensure oldfd is closed on error
+        return (1);
+    }
+    close(oldfd);
+    return (0);
+}
 
-// ----- Redirection halding ------
-
-// Handles a single redirection, returning the opened file descriptor.
+// Opens a file based on redirection type, returns fd.
 static int open_redirection_file(t_redirection *redir)
 {
     if (redir->type == REDIR_IN)
@@ -80,63 +128,71 @@ static int open_redirection_file(t_redirection *redir)
     return (-1); // Should not happen for valid types
 }
 
-// Duplicates file descriptor to standard stream and closes original.
-static int dup2_and_close(int oldfd, int newfd)
-{
-    if (dup2(oldfd, newfd) == -1)
-    {
-        perror("minishell: dup2");
-        close(oldfd); // Ensure oldfd is closed on error
-        return (1);
-    }
-    close(oldfd);
-    return (0);
-}
-
-// Handles all redirections for a command in the child process.
 int handle_redirections_in_child(t_command *cmd)
 {
-    t_redirection *redir;
-    int fd;
+    t_redirection   *redir;
+    int             fd;
+    int             last_in_fd; // Stores the final input FD (from file or heredoc)
+    int             last_out_fd; // Stores the final output FD
 
-    // Heredoc input
+    last_in_fd = -1;
+    last_out_fd = -1;
+
+    // 1. Prioritize heredoc if present (parser should have set cmd->heredoc_fd)
     if (cmd->heredoc_fd != -1)
-    {
-        if (dup2_and_close(cmd->heredoc_fd, STDIN_FILENO) != 0)
-            return (1);
-    }
+        last_in_fd = cmd->heredoc_fd;
 
+    // 2. Process all file redirections
     redir = cmd->redirections;
     while (redir)
     {
-        if (redir->type == REDIR_HEREDOC) // Already handled above
+        // Skip heredoc types in this loop, they are handled via cmd->heredoc_fd
+        if (redir->type == REDIR_HEREDOC)
         {
             redir = redir->next;
             continue;
         }
+
         fd = open_redirection_file(redir);
         if (fd == -1)
         {
-            perror(redir->file); // Error opening file
-            return (1);
+            perror(redir->file);
+            // Close any FDs already opened by previous redirections for this command
+            if (last_in_fd != -1 && last_in_fd != cmd->heredoc_fd) close(last_in_fd);
+            if (last_out_fd != -1) close(last_out_fd);
+            return (1); // Indicate error
         }
+
         if (redir->type == REDIR_IN)
         {
-            if (dup2_and_close(fd, STDIN_FILENO) != 0) return (1);
+            if (last_in_fd != -1) // Close previous input source if a new one is found
+                close(last_in_fd);
+            last_in_fd = fd;
         }
         else // REDIR_OUT or REDIR_APPEND
         {
-            if (dup2_and_close(fd, STDOUT_FILENO) != 0) return (1);
+            if (last_out_fd != -1) // Close previous output destination if a new one is found
+                close(last_out_fd);
+            last_out_fd = fd;
         }
         redir = redir->next;
+    }
+
+    // 3. Apply the final input and output FDs
+    if (last_in_fd != -1)
+    {
+        if (dup2_and_close(last_in_fd, STDIN_FILENO) != 0) return (1);
+    }
+    if (last_out_fd != -1)
+    {
+        if (dup2_and_close(last_out_fd, STDOUT_FILENO) != 0) return (1);
     }
     return (0);
 }
 
-// --- Child Process Specific Logic ---
-
 // Sets up pipe redirections for the child process.
-static void setup_child_pipes(t_command *cmd, int *pipe_fds, int prev_pipe_in_fd)
+static void setup_child_pipes(t_command *cmd, int *pipe_fds,
+        int prev_pipe_in_fd)
 {
     // Configure STDIN from previous pipe if applicable
     if (prev_pipe_in_fd != -1)
@@ -157,20 +213,21 @@ static void setup_child_pipes(t_command *cmd, int *pipe_fds, int prev_pipe_in_fd
     }
 }
 
-
 // Executes a command in the child process.
 static void child_execute_command(t_command *cmd, t_struct *mini)
 {
-    char **paths;
-    char *cmd_path;
+    char        **paths;
+    char        *cmd_path;
 
+    // Handle all redirections (heredoc, input files, output files)
     if (handle_redirections_in_child(cmd) != 0)
         exit(1); // Exit child on redirection error
 
     if (!cmd->args || !cmd->args[0]) // Empty command (e.g., just redirections)
         exit(0);
 
-    // Builtin check. If it's a builtin, execute it and exit.
+    // TODO: Builtin check. If it's a builtin, execute it and exit.
+    // These functions must be defined (even as placeholders) for compilation.
     if (is_builtin(cmd->args[0]))
     {
         execute_builtin(cmd, mini); // This should update mini->last_exit_status
@@ -179,7 +236,7 @@ static void child_execute_command(t_command *cmd, t_struct *mini)
     
     // External command execution
     paths = get_paths(mini->envp);
-    cmd_path = find_cmd_path(cmd->args[0], paths);
+    cmd_path = find_cmd_path(cmd->args, paths); // Pasamos cmd->args completo
 
     if (!cmd_path)
     {
@@ -190,18 +247,22 @@ static void child_execute_command(t_command *cmd, t_struct *mini)
     execve(cmd_path, cmd->args, mini->envp);
     // If execve returns, it failed
     perror("minishell: execve");
-    free(cmd_path);
+    free(cmd_path); // These frees are only reached if execve fails
     free_str_array(paths);
-    exit(126); // Command not executable
+    exit(126); // Command not executable (e.g., permission denied)
 }
+
+
+// --- Parent Process Specific Logic ---
 
 // Performs pipe and heredoc cleanup in the parent process after a fork.
 static void parent_cleanup(t_command *cmd, int *pipe_fds, int *prev_pipe_in_fd,
-                            pid_t child_pid, pid_t *child_pids, int cmd_idx)
+        pid_t child_pid, pid_t *child_pids, int cmd_idx)
 {
     child_pids[cmd_idx] = child_pid; // Store child PID
     if (*prev_pipe_in_fd != -1)
         close(*prev_pipe_in_fd); // Close read end of previous pipe
+
     if (cmd->next)
     {
         close(pipe_fds[1]); // Close write end of current pipe
@@ -213,7 +274,7 @@ static void parent_cleanup(t_command *cmd, int *pipe_fds, int *prev_pipe_in_fd,
             close(*prev_pipe_in_fd); // Close final pipe input
         *prev_pipe_in_fd = -1;
     }
-    // Close heredoc_fd in parent (child already duplicated or ignored it)
+    // Close heredoc_fd in parent (it was opened by parser, child duplicated or ignored it)
     if (cmd->heredoc_fd != -1)
     {
         close(cmd->heredoc_fd);
@@ -221,9 +282,9 @@ static void parent_cleanup(t_command *cmd, int *pipe_fds, int *prev_pipe_in_fd,
     }
 }
 
-
 // Waits for all child processes and updates last_exit_status.
-static void wait_for_children(pid_t *child_pids, int num_commands, t_struct *mini)
+static void wait_for_children(pid_t *child_pids, int num_commands,
+        t_struct *mini)
 {
     int status;
     int i;
@@ -245,10 +306,10 @@ static void wait_for_children(pid_t *child_pids, int num_commands, t_struct *min
 }
 
 // Initializes pipeline variables and allocates PIDs array.
-static int init_pipeline(t_command *commands, pid_t **child_pids_ptr)
+static int  init_pipeline(t_command *commands, pid_t **child_pids_ptr)
 {
-    t_command *current_cmd;
-    int num_commands;
+    t_command   *current_cmd;
+    int         num_commands;
 
     num_commands = 0;
     current_cmd = commands;
@@ -268,16 +329,23 @@ static int init_pipeline(t_command *commands, pid_t **child_pids_ptr)
 
 // Handles fork errors, cleaning up resources.
 static void handle_fork_error(int prev_pipe_in_fd, int *pipe_fds,
-                               t_command *current_cmd, pid_t *child_pids, t_struct *mini)
+        t_command *current_cmd, pid_t *child_pids, t_struct *mini)
 {
     perror("minishell: fork");
     mini->last_exit_status = 1;
     if (prev_pipe_in_fd != -1)
         close(prev_pipe_in_fd);
+    // Close current pipe ends if they were created before the fork error
     if (current_cmd && current_cmd->next)
     {
         close(pipe_fds[0]);
         close(pipe_fds[1]);
+    }
+    // Close current command's heredoc_fd if it exists
+    if (current_cmd && current_cmd->heredoc_fd != -1)
+    {
+        close(current_cmd->heredoc_fd);
+        current_cmd->heredoc_fd = -1;
     }
     free(child_pids);
 }
@@ -305,16 +373,19 @@ int execute_commands(t_command *commands, t_struct *mini)
     current_cmd = commands;
     while (current_cmd)
     {
-        if (current_cmd->next && pipe(pipe_fds) == -1) // Create pipe if needed
+        if (current_cmd->next && pipe(pipe_fds) == -1) // Create pipe if not last command
         {
             perror("minishell: pipe");
             mini->last_exit_status = 1;
             free(child_pids);
+            // Close any existing prev_pipe_in_fd or heredoc_fd on pipe error
+            if (prev_pipe_in_fd != -1) close(prev_pipe_in_fd);
+            if (current_cmd->heredoc_fd != -1) close(current_cmd->heredoc_fd);
             return (1);
         }
 
         pid = fork();
-        if (pid == -1)
+        if (pid == -1) // Fork error
         {
             handle_fork_error(prev_pipe_in_fd, pipe_fds, current_cmd, child_pids, mini);
             return (1);
@@ -322,7 +393,7 @@ int execute_commands(t_command *commands, t_struct *mini)
         else if (pid == 0) // Child process
         {
             setup_child_pipes(current_cmd, pipe_fds, prev_pipe_in_fd);
-            child_execute_command(current_cmd, mini); // This function handles execution and exits
+            child_execute_command(current_cmd, mini); // Executes command (or builtin) and exits
         }
         else // Parent process
         {
@@ -336,178 +407,22 @@ int execute_commands(t_command *commands, t_struct *mini)
     return (0);
 }
 
-// Función para ejecutar comandos
-int execute_commands(t_command *commands, char **envp, int *last_exit_status_ptr)
+// --- TEMPORARY PLACEHOLDERS FOR BUILTINS ---
+// Estas funciones DEBEN existir para que el código compile,
+// pero su implementación real vendrá después.
+
+int is_builtin(char *cmd_name)
 {
-    t_command *current_cmd;
-    pid_t pid;
-    int pipe_fds[2];
-    int prev_pipe_in_fd = -1;
-    pid_t *child_pids;
-    int num_commands = 0;
-    int i;
+    (void)cmd_name; // Evita advertencia de parámetro no usado
+    // Por ahora, siempre retorna 0 para que todos los comandos vayan a execve.
+    return (0); 
+}
 
-    current_cmd = commands;
-    while (current_cmd)
-    {
-        num_commands++;
-        current_cmd = current_cmd->next;
-    }
-
-    child_pids = ft_calloc(num_commands + 1, sizeof(pid_t));
-    if (!child_pids)
-    {
-        perror("minishell: calloc");
-        *last_exit_status_ptr = 1;
-        // Los heredoc_fd abiertos son gestionados por parse_input al cerrar los previos
-        // y por el padre después del fork.
-        return (1);
-    }
-
-    num_commands = 0; // Reiniciar para usar como índice de child_pids
-    current_cmd = commands;
-    while (current_cmd)
-    {
-        // En Bash, un warning de heredoc no cambia el exit status.
-        // La bandera `heredoc_error` se usa para que `handle_redirecctions_in_child`
-        // sepa que no debe usar un `heredoc_fd` inválido para la entrada estándar.
-        // No es necesario modificar el exit status del shell aquí solo por el warning.
-
-        if (current_cmd->next) // Si no es el último comando en una tubería
-        {
-            if (pipe(pipe_fds) == -1)
-            {
-                perror("minishell: pipe");
-                *last_exit_status_ptr = 1;
-                if (prev_pipe_in_fd != -1)
-                    close(prev_pipe_in_fd);
-                free(child_pids);
-                return (1);
-            }
-        }
-
-        pid = fork();
-        if (pid == -1)
-        {
-            perror("minishell: fork");
-            *last_exit_status_ptr = 1;
-            if (prev_pipe_in_fd != -1)
-                close(prev_pipe_in_fd);
-            if (current_cmd->next)
-            {
-                close(pipe_fds[0]);
-                close(pipe_fds[1]);
-            }
-            // El heredoc_fd del comando actual se cerrará en el padre más abajo
-            // o ya fue cerrado en parse_input si fue sobrescrito.
-            free(child_pids);
-            return (1);
-        }
-        else if (pid == 0) // Proceso hijo
-        {
-            // Configurar entrada de la tubería previa
-            if (prev_pipe_in_fd != -1)
-            {
-                if (dup2(prev_pipe_in_fd, STDIN_FILENO) == -1)
-                {
-                    perror("minishell: dup2 stdin child");
-                    exit(1);
-                }
-                close(prev_pipe_in_fd); // Cerrar el FD del pipe que se duplicó
-            }
-
-            // Configurar salida a la siguiente tubería (si existe)
-            if (current_cmd->next)
-            {
-                if (dup2(pipe_fds[1], STDOUT_FILENO) == -1)
-                {
-                    perror("minishell: dup2 stdout child");
-                    exit(1);
-                }
-            }
-
-            // Cerrar los extremos del pipe que no se usarán en el hijo
-            if (current_cmd->next)
-            {
-                close(pipe_fds[0]);
-                close(pipe_fds[1]);
-            }
-
-            // Gestionar todas las redirecciones (incluido el heredoc)
-            // handle_redirecctions_in_child usará cmd->heredoc_fd solo si heredoc_error es 0
-            if (handle_redirecctions_in_child(current_cmd) != 0)
-            {
-                exit(1); // Error durante el manejo de redirecciones
-            }
-
-            if (current_cmd->args && current_cmd->args[0])
-            {
-                char **paths = get_paths(envp);
-                char *cmd_path = find_cmd_path(current_cmd->args[0], paths);
-
-                if (!cmd_path)
-                {
-                    fprintf(stderr, "minishell: %s: command not found\n", current_cmd->args[0]);
-                    free_str_array(paths);
-                    exit(127); // Command not found
-                }
-                execve(cmd_path, current_cmd->args, envp);
-                perror("minishell: execve"); // Esto solo se ejecuta si execve falla
-                free(cmd_path);
-                free_str_array(paths);
-                exit(126); // Command not executable
-            }
-            else // Caso de comando vacío (ej. solo redirecciones sin comando explícito)
-            {
-                exit(0);
-            }
-        }
-        else // Proceso padre
-        {
-            child_pids[num_commands++] = pid; // Guardar el PID del hijo
-            if (prev_pipe_in_fd != -1)
-                close(prev_pipe_in_fd); // Cerrar el extremo de lectura del pipe anterior
-            if (current_cmd->next)
-            {
-                close(pipe_fds[1]); // Cerrar el extremo de escritura del pipe actual
-                prev_pipe_in_fd = pipe_fds[0]; // El extremo de lectura se convierte en la entrada para el siguiente comando
-            }
-            else // Es el último comando en la tubería
-            {
-                if (prev_pipe_in_fd != -1)
-                {
-                    close(prev_pipe_in_fd); // Asegurarse de cerrar el último pipe de entrada
-                    prev_pipe_in_fd = -1;
-                }
-            }
-
-            // Muy importante: Si el comando actual tiene un heredoc_fd abierto,
-            // el padre debe cerrarlo para evitar fugas de descriptores de archivo.
-            // El hijo ya lo habrá duplicado si era necesario.
-            if (current_cmd->heredoc_fd != -1)
-            {
-                close(current_cmd->heredoc_fd);
-                current_cmd->heredoc_fd = -1; // Marcar como cerrado
-            }
-        }
-        current_cmd = current_cmd->next; // Pasar al siguiente comando
-    }
-
-    // Esperar a que todos los procesos hijos terminen
-    int status;
-    i = 0;
-    while (i < num_commands)
-    {
-        waitpid(child_pids[i], &status, 0);
-        if (i == num_commands - 1) // El estado de salida del último comando en la tubería es el que importa
-        {
-            if (WIFEXITED(status))
-                *last_exit_status_ptr = WEXITSTATUS(status);
-            else if (WIFSIGNALED(status))
-                *last_exit_status_ptr = 128 + WTERMSIG(status);
-        }
-        i++;
-    }
-    free(child_pids); // Liberar el array de PIDs
+int execute_builtin(t_command *cmd, t_struct *mini)
+{
+    (void)cmd;  // Evita advertencia
+    (void)mini; // Evita advertencia
+    // Placeholder: El builtin no hace nada y el proceso hijo simplemente termina.
+    mini->last_exit_status = 0;
     return (0);
 }

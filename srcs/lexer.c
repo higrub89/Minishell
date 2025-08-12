@@ -20,15 +20,15 @@ static t_token	*create_new_token(char *value, t_token_type type)
 	new_token = (t_token *)ft_calloc(1, sizeof(t_token));
 	if (!new_token)
 	{
-		perror("malloc failed in create_new_token");
-		exit(EXIT_FAILURE);
+		perror("minishell: malloc failed in create_new_token");
+		return(NULL);
 	}
 	new_token->value = ft_strdup(value);
 	if (!new_token->value)
 	{
-		perror("ft_strdup failed in create_new_token");
+		perror("minishell: ft_strdup failed in create_new_token");
 		free(new_token);
-		exit(EXIT_FAILURE);
+		return (NULL);
 	}
 	new_token->type = type;
 	new_token->next = NULL;
@@ -40,6 +40,8 @@ static t_token	*create_new_token(char *value, t_token_type type)
 static void	add_token_to_list(t_token **head, t_token **current,
 		t_token *new_token)
 {
+	if (!new_token)
+		return ;
 	if (!*head)
 	{
 		*head = new_token;
@@ -79,31 +81,52 @@ static int	skip_spaces(const char *input, int i)
 static int	handle_redirection_in(const char *input, int i, t_token **head,
 		t_token **current)
 {
+	t_token *new_token;
+
 	if (input[i + 1] == '<')
 	{
-		add_token_to_list(head, current, create_new_token("<<", HEREDOC));
+		new_token = create_new_token("<<", HEREDOC);
+		if (!new_token)
+			return (-1);
+		add_token_to_list(head, current, new_token);
 		return (i + 2);
 	}
-	add_token_to_list(head, current, create_new_token("<", IN));
+	new_token = create_new_token("<", IN);
+	if (!new_token)
+		return (-1);
+	add_token_to_list(head, current, new_token);
 	return (i + 1);
 }
 
 static int	handle_redirection_out(const char *input, int i, t_token **head,
 		t_token **current)
 {
+	t_token *new_token;
+
 	if (input[i + 1] == '>')
 	{
-		add_token_to_list(head, current, create_new_token(">>", APPE_OUT));
+		new_token = create_new_token(">>", APPE_OUT);
+		if (!new_token)
+			return (-1);
+		add_token_to_list(head, current, new_token);
 		return (i + 2);
 	}
-	add_token_to_list(head, current, create_new_token(">", OUT));
+	new_token = create_new_token(">", OUT);
+	if (!new_token)
+		return (-1);
+	add_token_to_list(head, current, new_token);
 	return (i + 1);
 }
 
 static int	handle_pipe(const char *input, int i, t_token **head,
 		t_token **current)
 {
-	add_token_to_list(head, current, create_new_token("|", PIPE));
+	t_token *new_token;
+
+	new_token = create_new_token("|", PIPE);
+	if (!new_token)
+		return (-1);
+	add_token_to_list(head, current, new_token);
 	return (i + 1);
 }
 
@@ -134,7 +157,6 @@ static int	extract_word(const char *input, int i, t_token **head,
 			{
 				fprintf(stderr, "minishell: Syntax error: unclosed quote\n");
 				mini->last_exit_status = 258;
-				free_tokens(*head);
 				return (-1);
 			}
 			i = new_i;
@@ -151,6 +173,7 @@ static int	handle_word(const char *input, int i, t_token **head,
 	int		start;
 	int		token_len;
 	char	*word_value;
+	t_token *new_token;
 
 	start = i;
 	i = extract_word(input, i, head, mini);
@@ -160,14 +183,18 @@ static int	handle_word(const char *input, int i, t_token **head,
 	word_value = (char *)malloc(token_len + 1);
 	if (!word_value)
 	{
-		perror("minishel: malloc failed for word_value");
+		perror("minishell: malloc failed for word_value");
 		free_tokens(*head);
+		mini->last_exit_status = 1;
 		return (-1);
 	}
 	ft_strncpy(word_value, (char *)&input[start], token_len);
 	word_value[token_len] = '\0';
-	add_token_to_list(head, current, create_new_token(word_value, WORD));
+	new_token = create_new_token(word_value, WORD);
 	free(word_value);
+	if (!new_token)
+		return (-1);
+	add_token_to_list(head, current, new_token);
 	return (i);
 }
 
@@ -184,6 +211,13 @@ t_token	*lexer(const char *input, t_struct *mini)
 		i = skip_spaces(input, i);
 		if (!input[i])
 			break ;
+		if (input[i] == '&' || input[i] == ';' || input[i] == '(' || input[i] == ')')
+		{
+    	fprintf(stderr, "minishell: syntax error near unexpected token `%c'\n", input[i]);
+    	mini->last_exit_status = 258;
+    	free_tokens(head);
+    	return (NULL);
+		}
 		if (input[i] == '<')
 			i = handle_redirection_in(input, i, &head, &current);
 		else if (input[i] == '>')
@@ -193,7 +227,12 @@ t_token	*lexer(const char *input, t_struct *mini)
 		else
 			i = handle_word(input, i, &head, &current, mini);
 		if (i < 0)
+		{
+			free_tokens(head);
+			if (mini->last_exit_status == 0)
+				mini->last_exit_status = 1;
 			return (NULL);
+		}
 	}
 	return (head);
 }

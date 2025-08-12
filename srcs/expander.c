@@ -155,8 +155,6 @@ static void handle_special_dollar(t_string_builder *sb, const char *s,
     }
     else if (ft_isdigit(s[*i + 1])) // $0, $1, etc. (positional parameters)
     {
-        // For minishell, usually $0 is the shell name, $1+ are ignored.
-        // We append '$' and the digit literally as per usual behavior.
         ft_sb_append_char(sb, '$');
         ft_sb_append_char(sb, s[*i + 1]);
         (*i) += 2; // Move past $ and digit

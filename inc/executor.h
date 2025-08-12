@@ -11,4 +11,5 @@ int handle_redirecctions_in_child(t_command *cmd);
 
 int is_builtin(char *cmd_name);
 int execute_builtin(t_command *cmd, t_struct *mini);
+
 #endif

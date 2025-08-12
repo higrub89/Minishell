@@ -13,7 +13,9 @@
 #ifndef MINISHELL_H
 # define MINISHELL_H
 
+# include "../libft/inc/libft.h"
 # include <stdbool.h>
+# include <readline/readline.h>
 
 //Tipos de tokens.
 typedef enum e_token_type
@@ -50,9 +52,9 @@ typedef struct s_redirection
 {
   t_redir_type type;
   char    *file;
-  int heredoc_fd;
+  //int heredoc_fd;
   bool  expand_heredoc_content;
-  bool  heredoc_error;
+  //bool  heredoc_error;
   struct s_redirection *next;
 } t_redirection;
 
@@ -64,6 +66,7 @@ typedef struct s_command
   t_redirection *redirections;
   int num_redirections;
   char *full_path;
+  int heredoc_fd;
   struct s_command *next;
   struct s_command *prev;
 } t_command;
