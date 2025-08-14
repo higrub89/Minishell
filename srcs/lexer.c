@@ -167,7 +167,7 @@ static int	extract_word(const char *input, int i,
 	return (i);
 }
 
-static int	hadle_world_error(t_token **head, t_struct *mini)
+static int	hadle_word_error(t_token **head, t_struct *mini)
 {
 	perror("minishell: malloc failed for word_value");
 	free_tokens(*head);
@@ -190,7 +190,7 @@ static int	handle_word(const char *input, int i, t_token **head,
 	token_len = i - start;
 	word_value = ft_substr(input, start, token_len);
 	if (!word_value)
-		return (hadle_world_error(head, mini));
+		return (hadle_word_error(head, mini));
 	new_token = create_new_token(word_value, WORD);
 	free(word_value);
 	if (!new_token)
@@ -206,14 +206,6 @@ static int	lexer_syntax_error(char c, t_struct *mini, t_token *head)
 	free_tokens(head);
 	return (0);
 }
-
-
-
-
-
-
-
-
 
 static int	lexer_handle_result(int i, t_struct *mini, t_token *head)
 {
