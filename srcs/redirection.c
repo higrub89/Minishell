@@ -22,7 +22,7 @@ static int	handle_heredoc_signal(t_struct *mini, char *line)
 static int	handle_heredoc_eof(t_struct *mini, char *line)
 {
 	free(line);
-	mini->last_exit_status = 1;
+	//mini->last_exit_status = 1;
 	return (1);
 }
 
@@ -65,7 +65,7 @@ static int	heredoc_loop(t_redirection *heredoc, int pipe_fd[2], t_struct *mini)
 	ret_val = 0;
 	while (1)
 	{
-		line = readline("");
+		line = readline(">");
 		if (g_last_signal)
 			ret_val = handle_heredoc_signal(mini, line);
 		else if (!line)
@@ -105,8 +105,9 @@ static int	process_single_heredoc(t_redirection *heredoc, int pipe_fd[2],
 // Devuelve el último heredoc de la lista de redirecciones de un comando
 static t_redirection	*get_last_heredoc(t_redirection *redir)
 {
-	t_redirection	*last = NULL;
+	t_redirection	*last;
 
+	last = NULL;
 	while (redir)
 	{
 		if (redir->type == REDIR_HEREDOC)
@@ -141,7 +142,7 @@ static int	process_command_heredoc(t_command *cmd, t_struct *mini)
 // Procesa todos los heredocs de la lista de comandos
 int	process_heredoc_input(t_command *cmd_list, t_struct *mini)
 {
-	t_command	*cmd;
+	t_command *cmd;
 
 	cmd = cmd_list;
 	while (cmd)
