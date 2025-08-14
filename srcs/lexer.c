@@ -21,7 +21,7 @@ static t_token	*create_new_token(char *value, t_token_type type)
 	if (!new_token)
 	{
 		perror("minishell: malloc failed in create_new_token");
-		return(NULL);
+		return (NULL);
 	}
 	new_token->value = ft_strdup(value);
 	if (!new_token->value)
@@ -81,7 +81,7 @@ static int	skip_spaces(const char *input, int i)
 static int	handle_redirection_in(const char *input, int i, t_token **head,
 		t_token **current)
 {
-	t_token *new_token;
+	t_token	*new_token;
 
 	if (input[i + 1] == '<')
 	{
@@ -101,7 +101,7 @@ static int	handle_redirection_in(const char *input, int i, t_token **head,
 static int	handle_redirection_out(const char *input, int i, t_token **head,
 		t_token **current)
 {
-	t_token *new_token;
+	t_token	*new_token;
 
 	if (input[i + 1] == '>')
 	{
@@ -121,7 +121,7 @@ static int	handle_redirection_out(const char *input, int i, t_token **head,
 static int	handle_pipe(const char *input, int i, t_token **head,
 		t_token **current)
 {
-	t_token *new_token;
+	t_token	*new_token;
 
 	new_token = create_new_token("|", PIPE);
 	if (!new_token)
@@ -142,7 +142,7 @@ static int	skip_quotes(const char *input, int i, char quote_char)
 	return (i);
 }
 
-static int	extract_word(const char *input, int i, t_token **head,
+static int	extract_word(const char *input, int i,
 		t_struct *mini)
 {
 	int	new_i;
@@ -167,29 +167,30 @@ static int	extract_word(const char *input, int i, t_token **head,
 	return (i);
 }
 
+static int	hadle_world_error(t_token **head, t_struct *mini)
+{
+	perror("minishell: malloc failed for word_value");
+	free_tokens(*head);
+	mini->last_exit_status = 1;
+	return (-1);
+}
+
 static int	handle_word(const char *input, int i, t_token **head,
 		t_token **current, t_struct *mini)
 {
 	int		start;
 	int		token_len;
 	char	*word_value;
-	t_token *new_token;
+	t_token	*new_token;
 
 	start = i;
-	i = extract_word(input, i, head, mini);
+	i = extract_word(input, i, mini);
 	if (i < 0)
 		return (-1);
 	token_len = i - start;
-	word_value = (char *)malloc(token_len + 1);
+	word_value = ft_substr(input, start, token_len);
 	if (!word_value)
-	{
-		perror("minishell: malloc failed for word_value");
-		free_tokens(*head);
-		mini->last_exit_status = 1;
-		return (-1);
-	}
-	ft_strncpy(word_value, (char *)&input[start], token_len);
-	word_value[token_len] = '\0';
+		return (hadle_world_error(head, mini));
 	new_token = create_new_token(word_value, WORD);
 	free(word_value);
 	if (!new_token)
@@ -198,12 +199,55 @@ static int	handle_word(const char *input, int i, t_token **head,
 	return (i);
 }
 
+static int	lexer_syntax_error(char c, t_struct *mini, t_token *head)
+{
+	fprintf(stderr, "minishell: syntax error near unexpected token `%c'\n", c);
+	mini->last_exit_status = 258;
+	free_tokens(head);
+	return (0);
+}
+
+
+
+
+
+
+
+
+
+static int	lexer_handle_result(int i, t_struct *mini, t_token *head)
+{
+	if (i < 0)
+	{
+		free_tokens(head);
+		if (mini->last_exit_status == 0)
+			mini->last_exit_status = 1;
+		return (0);
+	}
+	return (1);
+}
+
+static int	lexer_process_token(const char *input, int i, t_token **head,
+		t_token **current, t_struct *mini)
+{
+	if (input[i] == '<')
+		return (handle_redirection_in(input, i, head, current));
+	else if (input[i] == '>')
+		return (handle_redirection_out(input, i, head, current));
+	else if (input[i] == '|')
+		return (handle_pipe(input, i, head, current));
+	return (handle_word(input, i, head, current, mini));
+}
+
 t_token	*lexer(const char *input, t_struct *mini)
 {
-	t_token *head = NULL;
-	t_token *current = NULL;
-	int i = 0;
+	t_token	*head;
+	t_token	*current;
+	int		i;
 
+	head = NULL;
+	current = NULL;
+	i = 0;
 	if (!input)
 		return (NULL);
 	while (input[i])
@@ -211,28 +255,13 @@ t_token	*lexer(const char *input, t_struct *mini)
 		i = skip_spaces(input, i);
 		if (!input[i])
 			break ;
-		if (input[i] == '&' || input[i] == ';' || input[i] == '(' || input[i] == ')')
-		{
-    	fprintf(stderr, "minishell: syntax error near unexpected token `%c'\n", input[i]);
-    	mini->last_exit_status = 258;
-    	free_tokens(head);
-    	return (NULL);
-		}
-		if (input[i] == '<')
-			i = handle_redirection_in(input, i, &head, &current);
-		else if (input[i] == '>')
-			i = handle_redirection_out(input, i, &head, &current);
-		else if (input[i] == '|')
-			i = handle_pipe(input, i, &head, &current);
-		else
-			i = handle_word(input, i, &head, &current, mini);
-		if (i < 0)
-		{
-			free_tokens(head);
-			if (mini->last_exit_status == 0)
-				mini->last_exit_status = 1;
+		if (input[i] == '&' || input[i] == ';' || input[i] == '('
+			|| input[i] == ')')
+			if (!lexer_syntax_error(input[i], mini, head))
+				return (NULL);
+		i = lexer_process_token(input, i, &head, &current, mini);
+		if (!lexer_handle_result(i, mini, head))
 			return (NULL);
-		}
 	}
 	return (head);
 }
