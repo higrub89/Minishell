@@ -164,7 +164,6 @@ static int	handle_redir(t_redirection *redir, int *last_fd)
 {
 	if (handle_single_redirection(redir, last_fd) == -1)
 	{
-		perror(redir->file);
 		if (*last_fd != -1)
 			close(*last_fd);
 		return (1);
@@ -175,9 +174,9 @@ static int	handle_redir(t_redirection *redir, int *last_fd)
 // Aplica los FDs finales a stdin y stdout
 static int	apply_final_fds(int last_in_fd, int last_out_fd)
 {
-	if (last_in_fd != -1 && apply_fd(last_in_fd, STDIN_FILENO))
+	if (last_in_fd != -1 && dup2_and_close(last_in_fd, STDIN_FILENO))
 		return (1);
-	if (last_out_fd != -1 && apply_fd(last_out_fd, STDOUT_FILENO))
+	if (last_out_fd != -1 && dup2_and_close(last_out_fd, STDOUT_FILENO))
 		return (1);
 	return (0);
 }
