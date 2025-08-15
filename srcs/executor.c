@@ -1,3 +1,4 @@
+#include "../inc/builtins.h"
 #include "../inc/executor.h"
 
 static void	add_slash_to_paths(char **paths)
@@ -263,7 +264,7 @@ static void	child_execute_command(t_command *cmd, t_struct *mini)
 {
 	if (handle_redirections_in_child(cmd) != 0)
 		exit(1);
-	if (!cmd->args || !cmd->args[0])
+	if (!cmd->args || !cmd->args[0] || cmd->args[0][0] == '\0')
 		exit(0);
 	if (is_builtin(cmd->args[0]))
 	{
@@ -371,6 +372,23 @@ static void	handle_fork_error(int prev_pipe_in_fd, int *pipe_fds,
 // ------------------ AUXILIARES ------------------
 
 // Maneja la ejecución de builtins únicos en el padre (optimizada <25 líneas)
+static void	close_heredoc(t_command *cmd)
+{
+	if (cmd->heredoc_fd != -1)
+	{
+		close(cmd->heredoc_fd);
+		cmd->heredoc_fd = -1;
+	}
+}
+
+static void	restore_fds(int stdin_fd, int stdout_fd)
+{
+	dup2(stdin_fd, STDIN_FILENO);
+	close(stdin_fd);
+	dup2(stdout_fd, STDOUT_FILENO);
+	close(stdout_fd);
+}
+
 static int	handle_single_builtin(t_command *cmd, t_struct *mini,
 		pid_t *child_pids)
 {
@@ -380,22 +398,16 @@ static int	handle_single_builtin(t_command *cmd, t_struct *mini,
 	orig_stdin = dup(STDIN_FILENO);
 	orig_stdout = dup(STDOUT_FILENO);
 	if (orig_stdin == -1 || orig_stdout == -1)
-		return (perror("dup"), free(child_pids), 1);
+		return (perror("minishell: dup original fds"), free(child_pids), 1);
 	if (handle_redirections_in_child(cmd) != 0)
 	{
-		dup2(orig_stdin, STDIN_FILENO);
-		dup2(orig_stdout, STDOUT_FILENO);
-		close(orig_stdin);
-		close(orig_stdout);
+		restore_fds(orig_stdin, orig_stdout);
+		close_heredoc(cmd);
 		return (free(child_pids), 1);
 	}
-	mini->last_exit_status = execute_builtin(cmd, mini);
-	dup2(orig_stdin, STDIN_FILENO);
-	dup2(orig_stdout, STDOUT_FILENO);
-	close(orig_stdin);
-	close(orig_stdout);
-	if (cmd->heredoc_fd != -1)
-		close(cmd->heredoc_fd);
+	execute_builtin(cmd, mini);
+	restore_fds(orig_stdin, orig_stdout);
+	close_heredoc(cmd);
 	free(child_pids);
 	return (0);
 }
@@ -431,7 +443,7 @@ static int	execute_pipeline(t_command *cmds, t_struct *mini, pid_t *child_pids,
 	t_command	*curr;
 	int			prev_fd;
 	int			cmd_idx;
-		int pipe_fd[2];
+	int			pipe_fd[2];
 	pid_t		pid;
 
 	curr = cmds;
@@ -462,7 +474,8 @@ int	execute_commands(t_command *commands, t_struct *mini)
 	num_commands = init_pipeline(commands, &child_pids);
 	if (num_commands == -1)
 		return (mini->last_exit_status = 1, 1);
-	if (num_commands == 1 && is_builtin(commands->args[0]))
+	if (num_commands == 1 && commands->args && commands->args[0]
+		&& is_builtin(commands->args[0]))
 		return (handle_single_builtin(commands, mini, child_pids));
 	return (execute_pipeline(commands, mini, child_pids, num_commands));
 }
@@ -474,22 +487,46 @@ int	execute_commands(t_command *commands, t_struct *mini)
 // Verifica si un comando es un builtin
 int	is_builtin(char *cmd_name)
 {
-	(void)cmd_name; // Evita advertencia de parámetro no usado
-	// Aquí es donde añadirás tus ft_strcmp para "echo", "cd", "pwd", etc.
-	// Ejemplo:
-	// if (ft_strcmp(cmd_name, "pwd") == 0) return (1);
-	// if (ft_strcmp(cmd_name, "echo") == 0) return (1);
+	if (!cmd_name)
+		return (0);
+	if (ft_strcmp(cmd_name, "echo") == 0)
+		return (1);
+	if (ft_strcmp(cmd_name, "cd") == 0)
+		return (1);
+	if (ft_strcmp(cmd_name, "pwd") == 0)
+		return (1);
+	if (ft_strcmp(cmd_name, "export") == 0)
+		return (1);
+	if (ft_strcmp(cmd_name, "unset") == 0)
+		return (1);
+	if (ft_strcmp(cmd_name, "env") == 0)
+		return (1);
+	if (ft_strcmp(cmd_name, "exit") == 0)
+		return (1);
 	return (0);
 }
-
 // Ejecuta un builtin
 int	execute_builtin(t_command *cmd, t_struct *mini)
 {
-	(void)cmd;  // Evita advertencia
-	(void)mini; // Evita advertencia
-	// Aquí es donde añadirás un switch/if-else if para llamar a la función específica de cada builtin.
-	// Ejemplo:
-	// if (ft_strcmp(cmd->args[0], "pwd") == 0) return (ft_pwd(cmd, mini));
-	mini->last_exit_status = 0;
-	return (0);
+	if (!cmd || !cmd->args || !cmd->args[0])
+	{
+		mini->last_exit_status = 1;
+		return (1);
+	}
+	if (ft_strcmp(cmd->args[0], "echo") == 0)
+		return (ft_echo(cmd->args));
+	else if (ft_strcmp(cmd->args[0], "cd") == 0)
+		return (ft_cd(mini, cmd->args));
+	else if (ft_strcmp(cmd->args[0], "pwd") == 0)
+		return (ft_pwd(mini));
+	else if (ft_strcmp(cmd->args[0], "export") == 0)
+		return (ft_export(mini, cmd->args));
+	else if (ft_strcmp(cmd->args[0], "unset") == 0)
+		return (ft_unset(mini, cmd->args));
+	else if (ft_strcmp(cmd->args[0], "env") == 0)
+		return (ft_env(mini));
+	else if (ft_strcmp(cmd->args[0], "exit") == 0)
+		return (ft_exit(mini, cmd->args));
+	mini->last_exit_status = 1;
+	return (1);
 }

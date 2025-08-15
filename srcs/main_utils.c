@@ -17,5 +17,3 @@ void cleanup_minishell(t_struct *mini)
     if (mini->envp)
         free_str_array(mini->envp);
 }
-
-void free_token_list
