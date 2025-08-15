@@ -52,20 +52,35 @@ void	free_str_array(char **arr)
 	free(arr);
 }
 
-char	*get_env_value(const char *name, char **envp)
-{
-	size_t	name_len;
+#include "../inc/env_utils.h"
 
-	name_len = ft_strlen(name);
-	if (name_len == 0)
-		return (NULL);
-	while (*envp)
+// ... (tus funciones ft_copy_str_array, free_str_array) ...
+
+// LA ÚNICA Y COMPLETA IMPLEMENTACIÓN DE get_env_value
+char	*get_env_value(const char *name, t_struct *mini)
+{
+	int i;
+	size_t len;
+
+	char *str_status; // Variable temporal para ft_itoa
+	if (!name || !mini || !mini->envp)
+		return (ft_strdup(""));
+	if (ft_strncmp(name, "?", 2) == 0)
 	{
-		if (ft_strncmp(*envp, name, name_len) == 0 && (*envp)[name_len] == '=')
-			return (*envp + name_len + 1);
-		envp++;
+		str_status = ft_itoa(mini->last_exit_status);
+		if (!str_status)            // Manejo de error de malloc para ft_itoa
+			return (ft_strdup("")); // Devuelve cadena vacía si ft_itoa falla
+		return (str_status);        // ft_itoa devuelve una cadena malloc-eada
 	}
-	return (NULL);
+	 len = ft_strlen(name);
+	 i = 0;
+	 while (mini->envp[i])
+	{
+		if (ft_strncmp(mini->envp[i], name, len) == 0 && mini->envp[i][len] == '=')
+			return (ft_strdup(mini->envp[i] + len + 1));
+		i++;
+	}
+	return (ft_strdup("")); // Variable no encontrada, retorna cadena vacía
 }
 
 int	ft_setenv_var(t_struct *mini, const char *key, const char *value)
@@ -126,8 +141,8 @@ int	ft_setenv_var(t_struct *mini, const char *key, const char *value)
 		new_envp[i] = new_var_str; // Añadir la nueva variable string
 		new_envp[i + 1] = NULL;    // Terminar el nuevo array con NULL
 
-		free(mini->envp);     
-			// Liberar el array viejo de punteros (NO las strings dentro)
+		free(mini->envp);
+		// Liberar el array viejo de punteros (NO las strings dentro)
 		mini->envp = new_envp; // Asignar el nuevo array a mini->envp
 	}
 	return (0); // Éxito

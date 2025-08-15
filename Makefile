@@ -16,10 +16,18 @@ RM					= rm -f
 COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/lexer.c \
 									srcs/parser.c \
-									srcs/utils_command.c \
+									srcs/redirection.c \
 									srcs/expander.c \
 									srcs/executor.c \
-									srcs/redirecction.c
+									srcs/main_utils.c \
+									srcs/env_utils.c \
+									srcs/builtin_unset.c \
+									srcs/builtin_pwd.c \
+									srcs/builtin_export.c \
+									srcs/builtin_exit.c \
+									srcs/builtin_env.c \
+									srcs/builtin_echo.c \
+									srcs/builtin_cd.c 
 									
 
 # Concatenate all source files
@@ -38,7 +46,7 @@ $(LIBFT):
 all: 				$(NAME)
 
 $(NAME): 			$(OBJ) $(LIBFT)
-					@$(CC) $(CFLAGS) $(INC) $(OBJ) $(LIBFT) $(LDFLAGS) -o $(NAME) 2>&1 | lolcat
+					@$(CC) $(CFLAGS) $(INC) $(OBJ) $(LIBFT) $(LDFLAGS) -o $(NAME) 2>&1 
 
 # Compile object files from source files
 $(OBJ_DIR)%.o:		$(SRC_DIR)%.c 

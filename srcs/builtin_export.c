@@ -77,41 +77,29 @@ static void	print_export_env(t_struct *mini)
 	int		i;
 	char	*equal_sign;
 
-	// 1. Crear una copia del entorno para poder ordenarla sin afectar el original.
-	// Usamos ft_copy_str_array de env_utils.h
 	sorted_envp = ft_copy_str_array(mini->envp);
 	if (!sorted_envp)
-	{
-		perror("minishell: export: malloc for sorted envp");
-		mini->last_exit_status = 1;
-		return ;
-	}
-	// 2. Ordenar la copia del entorno.
+		return (perror("minishell: export: malloc for sorted envp"),
+				mini->last_exit_status = 1, (void)0);
+
 	sort_env_array(sorted_envp);
-	// 3. Imprimir cada variable con el formato `declare -x`.
 	i = 0;
 	while (sorted_envp[i])
 	{
 		ft_putstr_fd("declare -x ", STDOUT_FILENO);
 		equal_sign = ft_strchr(sorted_envp[i], '=');
-		if (equal_sign) // Si la variable tiene un '=', imprimir KEY="VALUE"
+		if (equal_sign)
 		{
-			// Imprime la clave (hasta el '=')
-			ft_write(STDOUT_FILENO, sorted_envp[i], equal_sign
-				- sorted_envp[i]);
+			write(STDOUT_FILENO, sorted_envp[i], equal_sign - sorted_envp[i]);
 			ft_putstr_fd("=\"", STDOUT_FILENO);
-			// Imprime el valor (después del '=')
 			ft_putstr_fd(equal_sign + 1, STDOUT_FILENO);
 			ft_putendl_fd("\"", STDOUT_FILENO);
 		}
-		else 
-		{
+		else
 			ft_putendl_fd(sorted_envp[i], STDOUT_FILENO);
-		}
 		i++;
 	}
-	// 4. Liberar la copia ordenada del entorno.
-	free_str_array(sorted_envp); // Usamos free_str_array de env_utils.h
+	free_str_array(sorted_envp);
 }
 
 /**

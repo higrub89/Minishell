@@ -10,5 +10,6 @@ int add_arg_to_command(t_command *cmd, const char *arg);
 t_command *create_command_node(void);
 t_redirection *create_redirection_node(t_redir_type type, char *file);
 void add_redir_to_command(t_command *cmd, t_redirection *new_redir);
+void free_commands(t_command *head);
 
 #endif

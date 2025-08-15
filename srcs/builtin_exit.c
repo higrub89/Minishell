@@ -27,6 +27,39 @@ static int is_numeric(char *str)
     return (1);
 }
 
+
+static long long	safe_atoll(const char *str)
+{
+	int			sign;
+	long long	result;
+	size_t		i;
+
+	sign = 1;
+	result = 0;
+	i = 0;
+
+	// Saltar espacios iniciales
+	while (str[i] == ' ' || (str[i] >= 9 && str[i] <= 13))
+		i++;
+
+	// Signo opcional
+	if (str[i] == '+' || str[i] == '-')
+	{
+		if (str[i] == '-')
+			sign = -1;
+		i++;
+	}
+
+	// Convertir dígitos manualmente
+	while (str[i] >= '0' && str[i] <= '9')
+	{
+		result = result * 10 + (str[i] - '0');
+		i++;
+	}
+
+	return (result * sign);
+}
+
 /**
  * @brief Implementación del builtin 'exit'.
  * Termina la minishell con un estado de salida específico.
@@ -34,54 +67,41 @@ static int is_numeric(char *str)
  * @param args Array de argumentos (args[0] es "exit", args[1] es el estado de salida opcional).
  * @return Nunca debería retornar, ya que llama a exit().
  */
-int ft_exit(t_struct *mini, char **args)
+
+
+int	ft_exit(t_struct *mini, char **args)
 {
-    long long   exit_code; // Usar long long para manejar valores grandes
-    int         num_args;
+	long long	exit_code;
+	int			num_args;
 
-    // Bash siempre imprime "exit" en la salida estándar cuando se invoca.
-    ft_putendl_fd("exit", STDOUT_FILENO);
+	ft_putendl_fd("exit", STDOUT_FILENO);
 
-    num_args = 0;
-    while (args[num_args])
-        num_args++;
+	num_args = 0;
+	while (args[num_args])
+		num_args++;
 
-    // Caso 1: 'exit' sin argumentos (num_args == 1)
-    if (num_args == 1)
-    {
-        // Sale con el último estado de salida de la minishell
-        exit(mini->last_exit_status);
-    }
-    // Caso 2: 'exit <argumento>'
-    else if (num_args >= 2)
-    {
-        if (!is_numeric(args[1]))
-        {
-            // Error: argumento no numérico (ej. 'exit abc')
-            ft_putstr_fd("minishell: exit: ", STDERR_FILENO);
-            ft_putstr_fd(args[1], STDERR_FILENO);
-            ft_putendl_fd(": numeric argument required", STDERR_FILENO);
-            exit(255); // Estado de salida 255 para error de argumento no numérico
-        }
-        else if (num_args > 2)
-        {
-            // Error: demasiados argumentos si el primero es numérico (ej. 'exit 1 2 3')
-            ft_putendl_fd("minishell: exit: too many arguments", STDERR_FILENO);
-            // Bash establece el estado de salida a 1 y NO sale de la shell.
-            mini->last_exit_status = 1;
-            return (1); // Retorna para que la shell continúe (como Bash)
-        }
-        else // 'exit <código_válido>' (num_args == 2 y args[1] es numérico)
-        {
-            // Convierte el argumento a un número.
-            // ft_atol es tu propia función atoi/atoll para long long.
-            exit_code = ft_atol(args[1]); 
-            // Bash trunca el estado de salida a un byte (0-255).
-            // Un valor negativo se convierte a un número positivo en ese rango.
-            // Ej: exit -1 -> 255, exit 256 -> 0.
-            exit((unsigned char)exit_code);
-        }
-    }
-    // Este retorno es solo para satisfacer al compilador, ya que exit() terminará el proceso.
-    return (0); 
+	if (num_args == 1)
+		exit(mini->last_exit_status);
+	else if (num_args >= 2)
+	{
+		if (!is_numeric(args[1]))
+		{
+			ft_putstr_fd("minishell: exit: ", STDERR_FILENO);
+			ft_putstr_fd(args[1], STDERR_FILENO);
+			ft_putendl_fd(": numeric argument required", STDERR_FILENO);
+			exit(255);
+		}
+		else if (num_args > 2)
+		{
+			ft_putendl_fd("minishell: exit: too many arguments", STDERR_FILENO);
+			mini->last_exit_status = 1;
+			return (1);
+		}
+		else
+		{
+			exit_code = safe_atoll(args[1]);
+			exit((unsigned char)exit_code);
+		}
+	}
+	return (0);
 }

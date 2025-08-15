@@ -102,19 +102,6 @@ char	*find_cmd_path(char **cmd_args, char **paths)
 	return (NULL);
 }
 
-// Libera un array de strings
-void	free_str_array(char **arr)
-{
-	int	i;
-
-	i = 0;
-	if (!arr)
-		return ;
-	while (arr[i])
-		free(arr[i++]);
-	free(arr);
-}
-
 // ---- Funciones de manejo de redirecciones ----
 
 // Duplica un descriptor de archivo al stream estandar y cierra el original.
@@ -413,8 +400,7 @@ static int	handle_single_builtin(t_command *cmd, t_struct *mini,
 }
 
 // Crea pipe si es necesario y hace fork, retorna pid
-static pid_t	create_pipe_and_fork(t_command *cmd, int prev_fd,
-		int pipe_fd[2])
+static pid_t	create_pipe_and_fork(t_command *cmd, int pipe_fd[2])
 {
 	if (cmd->next && pipe(pipe_fd) == -1)
 		return (perror("pipe"), -1);
@@ -451,9 +437,12 @@ static int	execute_pipeline(t_command *cmds, t_struct *mini, pid_t *child_pids,
 	cmd_idx = 0;
 	while (curr)
 	{
-		pid = create_pipe_and_fork(curr, prev_fd, pipe_fd);
+		pid = create_pipe_and_fork(curr, pipe_fd);
 		if (pid == -1)
+		{
+			handle_fork_error(prev_fd, pipe_fd, curr, child_pids, mini);
 			return (1);
+		}
 		if (pid == 0)
 			child_process(curr, pipe_fd, prev_fd, mini);
 		else

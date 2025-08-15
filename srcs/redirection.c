@@ -22,7 +22,7 @@ static int	handle_heredoc_signal(t_struct *mini, char *line)
 static int	handle_heredoc_eof(t_struct *mini, char *line)
 {
 	free(line);
-	//mini->last_exit_status = 1;
+	mini->last_exit_status = 1;
 	return (1);
 }
 

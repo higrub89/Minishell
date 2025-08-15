@@ -23,10 +23,31 @@ t_command	*create_command_node(void)
 	return (new_cmd);
 }
 
+// Elimina las comillas de la cadena si existen
+static char *remove_quotes(char *str)
+{
+    char *new_str;
+    int len;
+
+    if (!str)
+        return NULL;
+    len = ft_strlen(str);
+    if ((str[0] == '\'' && str[len - 1] == '\'') ||
+        (str[0] == '\"' && str[len - 1] == '\"'))
+    {
+        // Si hay comillas, crea una subcadena sin ellas.
+        new_str = ft_substr(str, 1, len - 2);
+        free(str);
+        return new_str;
+    }
+    return str; // No hay comillas, devuelve la cadena original.
+}
+
 // Crea un nuevo nodo de redirección.
 t_redirection	*create_redirection_node(t_redir_type type, char *file)
 {
 	t_redirection	*new_redir;
+	char *stripped_file;
 
 	new_redir = (t_redirection *)ft_calloc(1, sizeof(t_redirection));
 	if (!new_redir)
@@ -34,14 +55,22 @@ t_redirection	*create_redirection_node(t_redir_type type, char *file)
 		perror("minishell: malloc failed in create_redirection_node");
 		return (NULL);
 	}
-	new_redir->type = type;
-	new_redir->file = ft_strdup(file);
-	if (!new_redir->file)
+	if (type == REDIR_HEREDOC)
+	{
+		stripped_file = remove_quotes(ft_strdup(file));
+	}
+	else
+	{
+		stripped_file = ft_strdup(file);
+	}
+	if (!stripped_file)
 	{
 		perror("minishell: ft_strdup failed in create_redirection_node");
 		free(new_redir);
 		return (NULL);
 	}
+	new_redir->type = type;
+	new_redir->file = stripped_file;
 	new_redir->expand_heredoc_content = (type == REDIR_HEREDOC
 			&& !ft_strchr(file, '\'') && !ft_strchr(file, '\"'));
 	new_redir->next = NULL;
@@ -115,13 +144,12 @@ int	add_arg_to_command(t_command *cmd, const char *arg)
 }
 
 // Función para limpiar en caso de error de parsing.
-static t_command	*handle_parse_error(t_command *cmd_list_head,
+static void	parser_error_cleanup(t_command *cmd_list_head,
 		t_struct *mini)
 {
 	if (cmd_list_head)
 		free_commands(cmd_list_head);
 	mini->last_exit_status = 258;
-	return (NULL);
 }
 
 // Auxiliar para process_redirection: obtiene el tipo de redirección.
@@ -149,7 +177,8 @@ static t_token	*redir_syntax_error(t_token *current_token, t_struct *mini,
 		token_value = "newline";
 	fprintf(stderr, "minishell: syntax error near unexpected token `%s`\n",
 		token_value);
-	return (handle_parse_error(cmd_head, mini));
+	parser_error_cleanup(cmd_head, mini);
+	return (NULL);
 }
 
 // Procesa un token de redirección.
@@ -164,10 +193,16 @@ static t_token	*process_redirection(t_token *current_token,
 		return (redir_syntax_error(current_token, mini, cmd_head));
 	type = get_redirection_type(current_token);
 	if (type == (t_redir_type)-1)
-		return (handle_parse_error(cmd_head, mini));
+	{
+		parser_error_cleanup(cmd_head, mini);
+		return (NULL);
+	}
 	new_redir = create_redirection_node(type, current_token->next->value);
 	if (!new_redir)
-		return (handle_parse_error(cmd_head, mini));
+	{
+		parser_error_cleanup(cmd_head, mini);
+		return (NULL);
+	}
 	add_redir_to_command(current_cmd, new_redir);
 	return (current_token->next->next);
 }
@@ -177,14 +212,18 @@ static t_token	*process_word(t_token *current_token, t_command *current_cmd,
 		t_struct *mini, t_command *cmd_head)
 {
 	if (!add_arg_to_command(current_cmd, current_token->value))
-		return (handle_parse_error(cmd_head, mini)); // Error malloc.
+	{
+		parser_error_cleanup(cmd_head, mini);
+		return (NULL);
+	}
 	return (current_token->next);
 }
 
 static t_command	*pipe_syntax_error(t_struct *mini, t_command *cmd_head)
 {
 	fprintf(stderr, "minishell: syntax error near unexpected token `|`\n");
-	return (handle_parse_error(cmd_head, mini));
+	parser_error_cleanup(cmd_head, mini);
+	return (NULL);
 }
 
 // Procesa un token PIPE.
@@ -199,7 +238,10 @@ static t_command	*process_pipe(t_token *current_token,
 		return (pipe_syntax_error(mini, cmd_head));
 	new_cmd = create_command_node();
 	if (!new_cmd)
-		return (handle_parse_error(cmd_head, mini));
+	{
+		parser_error_cleanup(cmd_head, mini);
+		return (NULL);
+	}
 	current_cmd->next = new_cmd;
 	new_cmd->prev = current_cmd;
 	return (new_cmd);
@@ -209,7 +251,8 @@ static t_command	*process_pipe(t_token *current_token,
 static t_token	*leading_pipe_error(t_struct *mini, t_command *cmd_head)
 {
 	fprintf(stderr, "minishell: syntax error near unexpected token `|`\n");
-	return (handle_parse_error(cmd_head, mini));
+	parser_error_cleanup(cmd_head, mini);
+	return (NULL);
 }
 
 // Decide cómo procesar el token actual y avanza un puntero de token o comando.
@@ -231,7 +274,8 @@ static t_token	*process_token_node(t_token *current_token,
 				cmd_head);
 		return (current_token->next);
 	}
-	return (handle_parse_error(cmd_head, mini));
+	parser_error_cleanup(cmd_head, mini);
+	return (NULL);
 }
 
 // Maneja el resultado del bucle de parsing.
@@ -249,10 +293,11 @@ static int	parse_loop_result(t_token *current_token, t_command *cmd_head,
 static t_command	*trailing_pipe_error(t_command *cmd_head, t_struct *mini)
 {
 	fprintf(stderr, "minishell: syntax error near unexpected token `|`\n");
-	return (handle_parse_error(cmd_head, mini));
+	parser_error_cleanup(cmd_head, mini);
+	return (NULL);
 }
 
-// Auxiliares 
+// Auxiliares
 static t_command	*init_parse(t_token *token_list, t_struct *mini)
 {
 	t_command	*cmd_head;
@@ -261,7 +306,10 @@ static t_command	*init_parse(t_token *token_list, t_struct *mini)
 		return (NULL);
 	cmd_head = create_command_node();
 	if (!cmd_head)
-		return (handle_parse_error(NULL, mini));
+	{
+		parser_error_cleanup(cmd_head, mini);
+		return (NULL);
+	}
 	return (cmd_head);
 }
 
@@ -290,6 +338,8 @@ t_command	*parse_input(t_token *token_list, t_struct *mini)
 	{
 		current_token = process_token_node(current_token, &current_cmd,
 				mini, cmd_head, token_list);
+		if (!current_token && mini->last_exit_status == 258)
+			return (NULL);
 		loop_res = parse_loop_result(current_token, cmd_head, mini);
 		if (loop_res == 1)
 			break ;

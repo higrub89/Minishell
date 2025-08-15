@@ -5,7 +5,7 @@
 
 char **ft_copy_str_array(char **arr);
 void	free_str_array(char **arr);
-char	*get_env_value(const char *name, char **envp);
+char	*get_env_value(const char *name, t_struct *mini);
 int	ft_setenv_var(t_struct *mini, const char *key, const char *value);
 
 #endif

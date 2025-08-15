@@ -1,6 +1,4 @@
-#include "../inc/builtins.h"   // Incluye builtins.h, que a su vez incluye env_utils.h
-#include <sys/stat.h>             // Para stat y S_ISDIR (necesario para verificar directorios)
-#include <errno.h>                // Para perror
+#include "../inc/builtins.h"
 
 /**
  * @brief Verifica si una ruta es un directorio válido y accesible.
@@ -35,7 +33,7 @@ static void update_pwd_env(t_struct *mini, const char *new_path)
 
     // 1. Obtener el valor actual de PWD para convertirlo en OLDPWD
     // Usamos get_env_value de env_utils.h
-    old_pwd_value = get_env_value("PWD", mini->envp);
+    old_pwd_value = get_env_value("PWD", mini);
 
     // 2. Establecer OLDPWD con el valor anterior de PWD
     // Si PWD existía, su valor actual se convierte en el nuevo OLDPWD.
@@ -60,7 +58,7 @@ static int go_home(t_struct *mini)
     char *home_path;
 
     // Obtiene el valor de la variable HOME usando get_env_value de env_utils.h
-    home_path = get_env_value("HOME", mini->envp);
+    home_path = get_env_value("HOME", mini);
     if (!home_path || home_path[0] == '\0') // También considera HOME=""
     {
         ft_putendl_fd("minishell: cd: HOME not set", STDERR_FILENO);
@@ -71,9 +69,17 @@ static int go_home(t_struct *mini)
     // Intenta cambiar el directorio
     if (chdir(home_path) == 0)
     {
-        update_pwd_env(mini, home_path); // Actualiza PWD y OLDPWD
-        mini->last_exit_status = 0;
-        return (0);
+        char *canonical_path = getcwd(NULL, 0);
+        if (canonical_path) {
+            update_pwd_env(mini, canonical_path); // Actualiza PWD y OLDPWD
+            free(canonical_path);
+            mini->last_exit_status = 0;
+            return (0);
+        } else {
+            perror("minishell: cd: getcwd failed");
+            mini->last_exit_status = 1;
+            return (1);
+        }
     }
     else
     {
@@ -94,10 +100,10 @@ static char *get_parent_path(t_struct *mini)
 {
     char *pwd;
     char *parent;
-    int  len;
+    int len;
 
     // Obtiene el valor de PWD usando get_env_value de env_utils.h
-    pwd = get_env_value("PWD", mini->envp);
+    pwd = get_env_value("PWD", mini);
     
     // Si PWD no está configurado en el entorno, intenta obtener la ruta con getcwd().
     // Esto es un fallback, aunque normalmente PWD debería estar siempre actualizado por cd.
@@ -188,7 +194,7 @@ static int go_to_oldpwd(t_struct *mini)
     char *oldpwd_path;
 
     // Obtiene el valor de OLDPWD usando get_env_value de env_utils.h
-    oldpwd_path = get_env_value("OLDPWD", mini->envp);
+    oldpwd_path = get_env_value("OLDPWD", mini);
     if (!oldpwd_path || oldpwd_path[0] == '\0') // También considera OLDPWD=""
     {
         ft_putendl_fd("minishell: cd: OLDPWD not set", STDERR_FILENO);
@@ -243,7 +249,6 @@ int ft_cd(t_struct *mini, char **args)
         return (go_to_oldpwd(mini));
     
     // Caso 3: 'cd ..' -> Ir al directorio padre
-    // Aunque chdir("..") es suficiente, go_to_parent maneja la lógica de path canónico.
     if (ft_strncmp(target_path, "..", 3) == 0) // Uso 3 para comparar también el NULL terminator
         return (go_to_parent(mini));
 
@@ -262,8 +267,17 @@ int ft_cd(t_struct *mini, char **args)
             return (1);
         }
     }
-
+    
     // Caso 5: Ruta absoluta o relativa (ej. /tmp, mydir, ../another)
+    // Se añade esta validación para usar la función y evitar el error del compilador.
+    // Además, mejora el manejo de errores.
+    if (is_valid_directory(target_path) == 0)
+    {
+        perror("minishell: cd");
+        mini->last_exit_status = 1;
+        return (1);
+    }
+
     // Se intenta el cambio de directorio directamente con chdir.
     if (chdir(target_path) == 0)
     {
@@ -281,9 +295,9 @@ int ft_cd(t_struct *mini, char **args)
             return (1);
         }
     }
-    else // chdir falló (directorio no existe, no es un directorio, permisos, etc.)
+    else // chdir falló
     {
-        // Imprime el mensaje de error específico (ej. "No such file or directory").
+        // Esto solo debería ocurrir por problemas de permisos si la validación anterior pasó.
         perror("minishell: cd"); 
         mini->last_exit_status = 1;
         return (1);

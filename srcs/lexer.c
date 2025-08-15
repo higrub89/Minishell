@@ -123,6 +123,7 @@ static int	handle_pipe(const char *input, int i, t_token **head,
 {
 	t_token	*new_token;
 
+	(void)input;
 	new_token = create_new_token("|", PIPE);
 	if (!new_token)
 		return (-1);

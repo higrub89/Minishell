@@ -16,6 +16,7 @@
 # include "../libft/inc/libft.h"
 # include <stdbool.h>
 # include <readline/readline.h>
+# include <readline/history.h>
 
 //Tipos de tokens.
 typedef enum e_token_type
@@ -77,9 +78,13 @@ typedef struct s_minishell
   int last_exit_status;
 } t_struct;
 
-t_struct *init_minishell_struct(char **envp_original);
-void cleanup_minishell(t_struct *mini);
-void free_commands(t_command *head);
-void free_tokens(t_token *head);
+# include "lexer.h"
+# include "parser.h"
+# include "redirection.h"
+# include "expander.h"
+# include "executor.h"
+# include "env_utils.h"
+# include "main_utils.h"
+# include "builtins.h"
 
 #endif

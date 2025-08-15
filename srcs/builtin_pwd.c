@@ -1,4 +1,4 @@
-#include "../../inc/builtins.h" // Incluye el header de builtins
+#include "../inc/builtins.h" // Incluye el header de builtins
 
 /**
  * @brief Implementación del builtin 'pwd'.

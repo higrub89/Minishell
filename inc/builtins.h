@@ -17,4 +17,3 @@ int     ft_echo(char **args); // No necesita t_struct si no afecta el estado
 int     ft_exit(t_struct *mini, char **args); // Para futuras implementaciones
 
 #endif
-
