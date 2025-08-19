@@ -68,40 +68,38 @@ static long long	safe_atoll(const char *str)
  * @return Nunca debería retornar, ya que llama a exit().
  */
 
-
 int	ft_exit(t_struct *mini, char **args)
 {
-	long long	exit_code;
-	int			num_args;
+    long long	exit_code;
+    int			num_args;
 
-	ft_putendl_fd("exit", STDOUT_FILENO);
-
-	num_args = 0;
-	while (args[num_args])
-		num_args++;
-
-	if (num_args == 1)
-		exit(mini->last_exit_status);
-	else if (num_args >= 2)
-	{
-		if (!is_numeric(args[1]))
-		{
-			ft_putstr_fd("minishell: exit: ", STDERR_FILENO);
-			ft_putstr_fd(args[1], STDERR_FILENO);
-			ft_putendl_fd(": numeric argument required", STDERR_FILENO);
-			exit(255);
-		}
-		else if (num_args > 2)
-		{
-			ft_putendl_fd("minishell: exit: too many arguments", STDERR_FILENO);
-			mini->last_exit_status = 1;
-			return (1);
-		}
-		else
-		{
-			exit_code = safe_atoll(args[1]);
-			exit((unsigned char)exit_code);
-		}
-	}
-	return (0);
+    ft_putendl_fd("exit", STDOUT_FILENO);
+    num_args = 0;
+    while (args[num_args])
+        num_args++;
+    mini->should_exit = true; // Indicamos que la shell debe terminar
+    if (num_args == 1)
+        return (mini->last_exit_status); // Usa el último código de salida
+    else if (num_args >= 2)
+    {
+        if (!is_numeric(args[1]))
+        {
+            ft_putstr_fd("minishell: exit: ", STDERR_FILENO);
+            ft_putstr_fd(args[1], STDERR_FILENO);
+            ft_putendl_fd(": numeric argument required", STDERR_FILENO);
+            mini->last_exit_status = 255;
+        }
+        else if (num_args > 2)
+        {
+            ft_putendl_fd("minishell: exit: too many arguments", STDERR_FILENO);
+            mini->last_exit_status = 1;
+            mini->should_exit = false; // En este caso, la shell NO debe salir
+        }
+        else
+        {
+            exit_code = safe_atoll(args[1]);
+            mini->last_exit_status = (unsigned char)exit_code;
+        }
+    }
+    return (mini->last_exit_status);
 }

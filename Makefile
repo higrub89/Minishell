@@ -27,8 +27,8 @@ COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/builtin_exit.c \
 									srcs/builtin_env.c \
 									srcs/builtin_echo.c \
-									srcs/builtin_cd.c 
-									
+									srcs/builtin_cd.c \
+									srcs/signals.c \
 
 # Concatenate all source files
 SRCS 				= $(COMMANDS_DIR) 

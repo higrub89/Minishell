@@ -352,8 +352,7 @@ static int	handle_single_builtin(t_command *cmd, t_struct *mini)
 	int	orig_stdin;
 	int	orig_stdout;
 
-	signal(SIGINT, SIG_IGN);
-	signal(SIGQUIT, SIG_IGN);
+	set_signals(NON_INTERACTIVE);
 	orig_stdin = dup(STDIN_FILENO);
 	orig_stdout = dup(STDOUT_FILENO);
 	if (orig_stdin == -1 || orig_stdout == -1)
@@ -380,8 +379,7 @@ static pid_t	create_pipe_and_fork(t_command *cmd, int pipe_fd[2])
 static void	child_process(t_command *cmd, int pipe_fd[2], int prev_fd,
 		t_struct *mini)
 {
-	signal(SIGINT, SIG_DFL);
-	signal(SIGQUIT, SIG_DFL);
+	set_signals(CHILD);
 	setup_child_pipes(cmd, pipe_fd, prev_fd);
 	child_execute_command(cmd, mini);
 }
@@ -401,8 +399,7 @@ static int	execute_pipeline(t_command *cmds, t_struct *mini, pid_t *child_pids,
 	int			pipe_fd[2];
 	pid_t		pid;
 
-	signal(SIGINT, SIG_IGN);
-	signal(SIGQUIT, SIG_IGN);
+	set_signals(NON_INTERACTIVE);
 	curr = cmds;
 	prev_fd = -1;
 	cmd_idx = 0;

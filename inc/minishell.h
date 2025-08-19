@@ -19,6 +19,7 @@
 # include <readline/readline.h>
 # include <readline/history.h>
 
+
 //Tipos de tokens.
 typedef enum e_token_type
 {
@@ -77,6 +78,7 @@ typedef struct s_minishell
 {
   char **envp;
   int last_exit_status;
+  bool should_exit;
 } t_struct;
 
 # include "lexer.h"
@@ -87,5 +89,22 @@ typedef struct s_minishell
 # include "env_utils.h"
 # include "main_utils.h"
 # include "builtins.h"
+
+// en inc/minishell.h
+
+// ... (justo después de tus includes)
+
+// -- Modos para el manejo de señales --
+typedef enum e_mode
+{
+	INTERACTIVE,
+	NON_INTERACTIVE,
+	CHILD
+}	t_mode;
+
+// ... (al final del archivo, junto a los otros prototipos)
+
+// -- signals.c --
+void	set_signals(t_mode mode);
 
 #endif

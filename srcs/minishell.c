@@ -1,18 +1,6 @@
 #include "../inc/minishell.h" // Incluye el master header que ya trae todo lo necesario
 
-// Nota: No usamos variables globales aquí, toda la información de la shell
-// se centraliza en la estructura t_minishell.
-// Esta será nuestra función para manejar SIGINT (Ctrl+C)
-void    main_signal_handler(int signum)
-{
-    if (signum == SIGINT)
-    {
-        ft_putchar_fd('\n', STDOUT_FILENO); // Mover a una nueva línea
-        rl_on_new_line();                   // Notificar a readline que nos movimos a una nueva línea
-        rl_replace_line("", 0);             // Limpiar el buffer de readline
-        rl_redisplay();                     // Volver a mostrar el prompt y el buffer (ahora vacío)
-    }
-}
+
 
 int main(int argc, char **argv, char **envp_main)
 {
@@ -35,9 +23,7 @@ int main(int argc, char **argv, char **envp_main)
   
     while (1)
     {
-        signal(SIGINT, main_signal_handler); // Configurar el manejador de señales para Ctrl+C
-        signal(SIGQUIT, SIG_IGN); // Ignorar SIGQUIT en el bucle principal.
-        
+        set_signals(INTERACTIVE); // Configurar el manejador de señales para el modo interactivo
         input_line = readline("minishell> "); // Mostrar prompt y leer entrada
 
         if (!input_line) // Manejo de CTRL + D (EOF)
@@ -90,7 +76,9 @@ int main(int argc, char **argv, char **envp_main)
         
         // 7. Limpiar: Liberar la memoria asignada para los comandos y la línea de entrada
         free_commands(commands); // Libera la lista de comandos
-        free(input_line);        // Libera la línea leída por readline
+        free(input_line);     
+        if (mini.should_exit)
+           break;
     }
     
     // 8. Limpieza final de la minishell antes de que el programa termine

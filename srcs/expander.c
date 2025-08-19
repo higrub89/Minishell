@@ -253,7 +253,7 @@ void	expand_variables(t_command *cmd_list, t_struct *mini)
 		current_redir = current_cmd->redirections;
 		while (current_redir)
 		{
-			if (current_redir->type == REDIR_HEREDOC && !current_redir->expand_heredoc_content)
+			if (current_redir->type == REDIR_HEREDOC)
 			{
 				expanded_str = expand_string(current_redir->file, mini);
 				if (!expanded_str)

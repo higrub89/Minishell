@@ -17,7 +17,8 @@ int init_minishell(t_struct *mini, char **envp_main)
         perror("minishell: failed to copy environment");
         return (1); // Indica fallo de inicialización
     }
-    mini->last_exit_status = 0; // Estado de salida inicial por defecto
+    mini->last_exit_status = 0;  // Estado de salida inicial por defecto
+    mini->should_exit = false;
     return (0); // Indica éxito
 }
 

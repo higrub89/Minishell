@@ -339,7 +339,10 @@ t_command	*parse_input(t_token *token_list, t_struct *mini)
 		current_token = process_token_node(current_token, &current_cmd,
 				mini, cmd_head, token_list);
 		if (!current_token && mini->last_exit_status == 258)
-			return (NULL);
+		{
+			free_commands(cmd_head);
+			return (NULL); // Error de sintaxis, liberar y retornar NULL.
+		}
 		loop_res = parse_loop_result(current_token, cmd_head, mini);
 		if (loop_res == 1)
 			break ;
