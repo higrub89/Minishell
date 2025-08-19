@@ -15,6 +15,7 @@
 
 # include "../libft/inc/libft.h"
 # include <stdbool.h>
+# include <signal.h>
 # include <readline/readline.h>
 # include <readline/history.h>
 

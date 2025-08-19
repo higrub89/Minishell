@@ -2,6 +2,17 @@
 
 // Nota: No usamos variables globales aquí, toda la información de la shell
 // se centraliza en la estructura t_minishell.
+// Esta será nuestra función para manejar SIGINT (Ctrl+C)
+void    main_signal_handler(int signum)
+{
+    if (signum == SIGINT)
+    {
+        ft_putchar_fd('\n', STDOUT_FILENO); // Mover a una nueva línea
+        rl_on_new_line();                   // Notificar a readline que nos movimos a una nueva línea
+        rl_replace_line("", 0);             // Limpiar el buffer de readline
+        rl_redisplay();                     // Volver a mostrar el prompt y el buffer (ahora vacío)
+    }
+}
 
 int main(int argc, char **argv, char **envp_main)
 {
@@ -21,8 +32,12 @@ int main(int argc, char **argv, char **envp_main)
     }
 
     // 2. Bucle principal de la shell: lectura, análisis, ejecución
+  
     while (1)
     {
+        signal(SIGINT, main_signal_handler); // Configurar el manejador de señales para Ctrl+C
+        signal(SIGQUIT, SIG_IGN); // Ignorar SIGQUIT en el bucle principal.
+        
         input_line = readline("minishell> "); // Mostrar prompt y leer entrada
 
         if (!input_line) // Manejo de CTRL + D (EOF)
