@@ -279,13 +279,10 @@ static t_token	*process_token_node(t_token *current_token,
 }
 
 // Maneja el resultado del bucle de parsing.
-static int	parse_loop_result(t_token *current_token, t_command *cmd_head,
-		t_struct *mini)
+static int	parse_loop_result(t_token *current_token)
 {
-	if (!current_token && cmd_head && mini->last_exit_status == 0)
+	if (!current_token)
 		return (1); // Éxito, bucle debe romperse.
-	if (!current_token && mini->last_exit_status != 0)
-		return (0); // Error, parser debe retornar NULL.
 	return (-1);    // Continuar el bucle.
 }
 
@@ -343,7 +340,7 @@ t_command	*parse_input(t_token *token_list, t_struct *mini)
 			free_commands(cmd_head);
 			return (NULL); // Error de sintaxis, liberar y retornar NULL.
 		}
-		loop_res = parse_loop_result(current_token, cmd_head, mini);
+		loop_res = parse_loop_result(current_token);
 		if (loop_res == 1)
 			break ;
 		else if (loop_res == 0)

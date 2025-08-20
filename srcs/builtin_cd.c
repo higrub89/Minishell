@@ -39,7 +39,10 @@ static void update_pwd_env(t_struct *mini, const char *new_path)
     // Si PWD existía, su valor actual se convierte en el nuevo OLDPWD.
     // Si PWD no existía, OLDPWD se establece como una cadena vacía.
     if (old_pwd_value)
+    {
         ft_setenv_var(mini, "OLDPWD", old_pwd_value);
+        free(old_pwd_value);
+    }
     else
         ft_setenv_var(mini, "OLDPWD", ""); // Si no hay PWD previo, OLDPWD se deja vacío
 
@@ -62,6 +65,7 @@ static int go_home(t_struct *mini)
     if (!home_path || home_path[0] == '\0') // También considera HOME=""
     {
         ft_putendl_fd("minishell: cd: HOME not set", STDERR_FILENO);
+        free(home_path);
         mini->last_exit_status = 1;
         return (1);
     }
