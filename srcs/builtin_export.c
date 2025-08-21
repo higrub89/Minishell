@@ -132,9 +132,9 @@ int	ft_export(t_struct *mini, char **args)
 
 		if (!is_valid_var_name(key_start)) // Validar el nombre de la variable
 		{
-			ft_putstr_fd("minishell: export: `", STDERR_FILENO);
+			ft_putstr_fd("minishell: export: ", STDERR_FILENO);
 			ft_putstr_fd(args[i], STDERR_FILENO);
-			ft_putendl_fd("`: not a valid identifier", STDERR_FILENO);
+			ft_putendl_fd(": not a valid identifier", STDERR_FILENO);
 			status = 1; // Marcar error, pero continuar con otros argumentos.
 		}
 		else
