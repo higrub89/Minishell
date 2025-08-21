@@ -266,7 +266,7 @@ void	expand_variables(t_command *cmd_list, t_struct *mini)
 			}
 			else if (current_redir->type != REDIR_HEREDOC)
 			{
-				expanded_str = expand_string(current_cmd->args[i], mini);
+				expanded_str = expand_string(current_redir->file, mini);
 				if (!expanded_str)
 				{
 					mini->last_exit_status = 1;
