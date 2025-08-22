@@ -57,7 +57,7 @@ static int	write_heredoc_line(char *expanded_line, int pipe_fd[2],
 }
 
 // Bucle principal del heredoc
-static int	heredoc_loop(t_redirection *heredoc, int pipe_fd[2], t_struct *mini)
+static int	heredoc_loop(t_redirection *heredoc, int pipe_fd[2], t_struct *mini, bool is_last)
 {
 	char	*line;
 	int		ret_val;
@@ -75,9 +75,11 @@ static int	heredoc_loop(t_redirection *heredoc, int pipe_fd[2], t_struct *mini)
 			free(line);
 			break ;
 		}
-		else
+		else if (is_last)
 			ret_val = write_heredoc_line(get_expanded_line(line, heredoc, mini),
 					pipe_fd, mini);
+		else
+			free(line);
 		if (ret_val)
 			break ;
 	}
@@ -86,13 +88,13 @@ static int	heredoc_loop(t_redirection *heredoc, int pipe_fd[2], t_struct *mini)
 
 // Función principal para procesar un heredoc
 static int	process_single_heredoc(t_redirection *heredoc, int pipe_fd[2],
-		t_struct *mini)
+		t_struct *mini, bool is_last)
 {
 	int	ret_val;
 
 	signal(SIGINT, handle_sigint);
 	g_last_signal = 0;
-	ret_val = heredoc_loop(heredoc, pipe_fd, mini);
+	ret_val = heredoc_loop(heredoc, pipe_fd, mini, is_last);
 	if (ret_val)
 	{
 		close(pipe_fd[0]);
@@ -121,9 +123,11 @@ static t_redirection	*get_last_heredoc(t_redirection *redir)
 static int	process_command_heredoc(t_command *cmd, t_struct *mini)
 {
 	t_redirection	*heredoc;
+	t_redirection	*last_heredoc;
 	int				pipe_fd[2];
 
-	heredoc = get_last_heredoc(cmd->redirections);
+	heredoc = cmd->redirections;
+	last_heredoc = get_last_heredoc(heredoc);
 	if (!heredoc)
 		return (0);
 	if (pipe(pipe_fd) == -1)
@@ -132,8 +136,19 @@ static int	process_command_heredoc(t_command *cmd, t_struct *mini)
 		mini->last_exit_status = 1;
 		return (1);
 	}
-	if (process_single_heredoc(heredoc, pipe_fd, mini))
-		return (1);
+	while(heredoc)
+	{
+		if (heredoc->type == REDIR_HEREDOC)
+		{
+			if (process_single_heredoc(heredoc, pipe_fd, mini, heredoc == last_heredoc))
+			{
+				close(pipe_fd[0]);
+				close(pipe_fd[1]);
+				return (1);
+			}	
+		}
+		heredoc = heredoc->next;
+	}
 	close(pipe_fd[1]);
 	cmd->heredoc_fd = pipe_fd[0];
 	return (0);

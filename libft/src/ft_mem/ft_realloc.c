@@ -32,7 +32,7 @@ void	*ft_realloc(void *ptr, size_t old_size, size_t new_size)
 	if (old_size < new_size)
 		ft_memcpy(new_ptr, ptr, old_size);
 	else
-		ft_memcpy((void *)new_size, ptr, new_size);
+		ft_memcpy(new_ptr, ptr, new_size);
 	free(ptr);
 	return (new_ptr);
 }
