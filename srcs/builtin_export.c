@@ -99,6 +99,11 @@ void	print_export_env(t_struct *mini)
 	char	*equal_sign;
 
 	copy = ft_copy_str_array(mini->envp);
+	// DEBUG: Imprime una linea para saber si la copia existe
+  if (copy)
+    ft_putendl_fd("Copia del entorno creada.", STDOUT_FILENO);
+  else
+    ft_putendl_fd("Error: Fallo al crear la copia del entorno.", STDOUT_FILENO);
 	i = 0;
 	if (!copy)
 	{
@@ -108,6 +113,10 @@ void	print_export_env(t_struct *mini)
 	sort_envp(copy);
 	while (copy[i])
 	{
+		// DEBUG: Imprime la variable actual antes de procesarla
+    ft_putstr_fd("Procesando variable: ", STDOUT_FILENO);
+    ft_putendl_fd(copy[i], STDOUT_FILENO);
+
 		ft_putstr_fd("declare -x ", STDOUT_FILENO);
 		equal_sign = ft_strchr(copy[i], '=');
 		if (equal_sign)
@@ -131,9 +140,9 @@ int	ft_export(t_struct *mini, char **arg)
 	int		status;
 	char	*empty_var;
 
-	i = 0;
+	i = 1;
 	status = 0;
-	if (!arg || !arg[0])
+	if (!arg[1])
 	{
 		print_export_env(mini);
 		return (0);
