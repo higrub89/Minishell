@@ -250,8 +250,10 @@ t_token	*lexer(const char *input, t_struct *mini)
 			break ;
 		if (input[i] == '&' || input[i] == ';' || input[i] == '('
 			|| input[i] == ')')
+		{
 			if (!lexer_syntax_error(input[i], mini, head))
 				return (NULL);
+		}
 		i = lexer_process_token(input, i, &head, &current, mini);
 		if (!lexer_handle_result(i, mini, head))
 			return (NULL);
