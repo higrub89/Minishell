@@ -504,7 +504,7 @@ int execute_builtin(t_command *cmd, t_struct *mini)
     else if (ft_strcmp(cmd->args[0], "cd") == 0)
         return (ft_cd(mini, cmd->args));
     else if (ft_strcmp(cmd->args[0], "pwd") == 0)
-        return (ft_pwd(mini));
+        return (ft_pwd(mini, cmd->args));
     else if (ft_strcmp(cmd->args[0], "export") == 0)
         return (ft_export(mini, cmd->args));
     else if (ft_strcmp(cmd->args[0], "unset") == 0)

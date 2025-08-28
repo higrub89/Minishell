@@ -1,9 +1,15 @@
-#include "../inc/builtins.h" // Incluye el header de builtins
+#include "../inc/builtins.h"
 
-int ft_pwd(t_struct *mini)
+int ft_pwd(t_struct *mini, char **args)
 {
     char    *cwd;
 
+    if (args[1] && args[1][0] == '-')
+    {
+        ft_putendl_fd("minishell: pwd: options are not supported", STDERR_FILENO);
+        mini->last_exit_status = 1;
+        return (1);
+    }
     // getcwd(NULL, 0) permite que el sistema asigne memoria automáticamente
     cwd = getcwd(NULL, 0);
     if (!cwd)
