@@ -5,6 +5,6 @@
 # include "parser.h"
 # include  <signal.h>
 
-int process_heredoc_input(t_command *cmd, t_struct *mini);
+int	process_heredoc_input(t_command *cmd_list, t_struct *mini);
 
 #endif

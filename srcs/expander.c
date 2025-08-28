@@ -186,97 +186,103 @@ static void	process_dollar_expansion(t_string_builder *sb, const char *s,
 	}
 }
 
-// --- Main Expansion Logic ---
+// --- Funciones de Expansión ---
 
-// Expands variables and removes all quotes from a string.
-// This function receives the string AS-IS from the parser (with quotes).
-char	*expand_string(char *original_str, t_struct *mini)
+/**
+ * @brief Expande variables en una cadena y ELIMINA las comillas.
+ * Usado para argumentos de comandos y nombres de archivo de redirección.
+ */
+char	*expand_and_remove_quotes(char *original_str, t_struct *mini)
 {
 	t_string_builder	sb;
 	int					i;
+	char				current_quote_char;
 
-	char current_quote_char; // 0 for no quote, '\'' or '\"'
 	if (!original_str)
-		return (ft_strdup("")); // Return empty string for NULL input
+		return (ft_strdup(""));
 	ft_sb_init(&sb);
 	if (!sb.buffer)
-		return (NULL); // Malloc failure
+		return (NULL);
 	i = 0;
 	current_quote_char = 0;
 	while (original_str[i])
 	{
 		if (original_str[i] == '\'' || original_str[i] == '\"')
 		{
-			if (current_quote_char == original_str[i]) // Closing quote
-				current_quote_char = 0;
-			else if (current_quote_char == 0) // Opening quote
+			if (current_quote_char == 0)
 				current_quote_char = original_str[i];
-			i++; // Skip the quote char itself
+			else if (current_quote_char == original_str[i])
+				current_quote_char = 0;
+			i++; // Saltar la comilla, no la añadimos al resultado
 			continue ;
 		}
-		if (original_str[i] == '$' && original_str[i + 1])
-			process_dollar_expansion(&sb, original_str, &i, mini,
-				current_quote_char);
-		else // Regular character, or '$' at end of string
-		{
-			ft_sb_append_char(&sb, original_str[i]);
-			i++;
-		}
+		if (original_str[i] == '$')
+			process_dollar_expansion(&sb, original_str, &i, mini, current_quote_char);
+		else
+			ft_sb_append_char(&sb, original_str[i++]);
 	}
 	return (ft_sb_build(&sb));
 }
 
-// Iterates through all commands and expands their arguments and redirections.
+/**
+ * @brief Expande variables en una línea de heredoc. NO elimina comillas.
+ */
+char	*expand_heredoc_line(char *line, t_struct *mini)
+{
+	t_string_builder	sb;
+	int					i;
+
+	if (!line)
+		return (NULL);
+	ft_sb_init(&sb);
+	if (!sb.buffer)
+		return (NULL);
+	i = 0;
+	while (line[i])
+	{
+		// En heredoc, solo expandimos si el delimitador no tenía comillas.
+		// Las comillas dentro de la línea son literales.
+		if (line[i] == '$')
+			process_dollar_expansion(&sb, line, &i, mini, 0); // 0 = sin comillas
+		else
+			ft_sb_append_char(&sb, line[i++]);
+	}
+	return (ft_sb_build(&sb));
+}
+
+/**
+ * @brief Bucle principal de expansión. Procesa argumentos y delimitadores de heredoc.
+ */
 void	expand_variables(t_command *cmd_list, t_struct *mini)
 {
-	t_command		*current_cmd;
-	t_redirection	*current_redir;
+	t_command		*cmd;
+	t_redirection	*redir;
 	char			*expanded_str;
 	int				i;
 
-	current_cmd = cmd_list;
-	while (current_cmd)
+	cmd = cmd_list;
+	while (cmd)
 	{
 		i = 0;
-		while (current_cmd->args && current_cmd->args[i])
+		while (cmd->args && cmd->args[i])
 		{
-			expanded_str = expand_string(current_cmd->args[i], mini);
-			if (!expanded_str) // Malloc error
-			{
-				mini->last_exit_status = 1; // Indicate memory error
-				return ;                    
-			}
-			free(current_cmd->args[i]);
-			current_cmd->args[i] = expanded_str;
-			i++;
+			expanded_str = expand_and_remove_quotes(cmd->args[i], mini);
+			free(cmd->args[i]);
+			cmd->args[i++] = expanded_str;
 		}
-		current_redir = current_cmd->redirections;
-		while (current_redir)
+		redir = cmd->redirections;
+		while (redir)
 		{
-			if (current_redir->type == REDIR_HEREDOC)
-			{
-				expanded_str = expand_string(current_redir->file, mini);
-				if (!expanded_str)
-				{
-					mini->last_exit_status = 1;
-					return ;
-				}
-				free(current_redir->file);
-				current_redir->file = expanded_str;
-			}
-			else if (current_redir->type != REDIR_HEREDOC)
-			{
-				expanded_str = expand_string(current_redir->file, mini);
-				if (!expanded_str)
-				{
-					mini->last_exit_status = 1;
-					return ;
-				}
-				free(current_redir->file);
-				current_redir->file = expanded_str;
-			}
-			current_redir = current_redir->next;
+			// El delimitador de Heredoc SIEMPRE se expande/limpia de comillas.
+			// La expansión del CONTENIDO se decide en el parser.
+			if (redir->type == REDIR_HEREDOC)
+				expanded_str = expand_and_remove_quotes(redir->file, mini);
+			else // Los nombres de archivo también se expanden
+				expanded_str = expand_and_remove_quotes(redir->file, mini);
+			free(redir->file);
+			redir->file = expanded_str;
+			redir = redir->next;
 		}
-		current_cmd = current_cmd->next;
+		cmd = cmd->next;
 	}
 }

@@ -510,7 +510,7 @@ int execute_builtin(t_command *cmd, t_struct *mini)
     else if (ft_strcmp(cmd->args[0], "unset") == 0)
         return (ft_unset(mini, cmd->args));
     else if (ft_strcmp(cmd->args[0], "env") == 0)
-        return (ft_env(mini));
+        return (ft_env(mini, cmd->args));
     else if (ft_strcmp(cmd->args[0], "exit") == 0)
         return (ft_exit(mini, cmd->args));
     mini->last_exit_status = 1;

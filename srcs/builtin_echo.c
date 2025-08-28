@@ -1,5 +1,4 @@
-#include "../inc/builtins.h" // Incluye el header de builtins
-
+#include "../inc/builtins.h"
 
 int is_valid_n_case(char **arg)
 {
