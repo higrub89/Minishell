@@ -82,26 +82,9 @@ int	go_to_oldpwd(t_struct *mini)
 
 int	go_to_parent(t_struct *mini)
 {
-	char	*cwd;
-	char	*parent;
-
-	cwd = getcwd(NULL, 0);
-	if (!cwd)
-	{
-		perror("minishell: cd: getcwd failed");
-		mini->last_exit_status = 1;
-		return (1);
-	}
-	parent = ft_strrchr(cwd, '/');
-	if (parent && parent != cwd)
-		*parent = '\0';
-	else
-		ft_strcpy(cwd, "/");
-    // Cambiar al directorio padre
-	if (chdir(cwd) != 0)
+	if (chdir("..") != 0) // 0 es éxito, -1 error
 	{
 		perror("minishell: cd");
-		free(cwd);
 		mini->last_exit_status = 1;
 		return (1);
 	}
