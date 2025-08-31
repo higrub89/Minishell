@@ -12,6 +12,8 @@ static char	**remove_from_export_list(t_struct *mini, char **export_list, char *
 	i = 0;
 	j = 0;
 	count = 0;
+	if (!export_list || !var_name)
+   		return (export_list);
     // Contar elementos
 	while (export_list && export_list[count])
 		count++;
@@ -22,8 +24,8 @@ static char	**remove_from_export_list(t_struct *mini, char **export_list, char *
     // Copiar elementos excepto el que se elimina
 	while (export_list[i])
 	{
-		if (!ft_strcmp(export_list[i], var_name))
-			new_list[j++] = ft_strdup(export_list[i]); //duplicar la memoria.
+		if (ft_strcmp(export_list[i], var_name) != 0)
+			new_list[j++] = ft_strdup(export_list[i]); //duplicar la memoria y copiar solo si no se elimina.
 		free(export_list[i]); // liberar el eliminado
 		i++;
 	}
