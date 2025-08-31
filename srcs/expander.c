@@ -1,13 +1,13 @@
 /* ************************************************************************** */
-/* */
-/* :::      ::::::::   */
-/* expander.c                                         :+:      :+:    :+:   */
-/* +:+ +:+         +:+     */
-/* By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
-/* +#+#+#+#+#+   +#+           */
-/* Created: 2025/06/24 16:34:07 by rhiguita          #+#    #+#             */
-/* Updated: 2025/06/24 16:34:10 by rhiguita         ###   ########.fr       */
-/* */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   expander.c                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/06/24 16:34:07 by rhiguita          #+#    #+#             */
+/*   Updated: 2025/08/31 00:00:00 by Gemini           ###   ########.fr       */
+/*                                                                            */
 /* ************************************************************************** */
 
 #include "../inc/expander.h"
@@ -37,6 +37,7 @@ static bool	ft_sb_grow(t_string_builder *sb, size_t needed)
 	if (sb->length + needed < sb->capacity) // Ya hay suficiente espacio
 		return (true);
 	new_capacity = sb->capacity;
+
 	while (sb->length + needed >= new_capacity)
 		// Duplicar capacidad hasta que sea suficiente
 		new_capacity *= 2;
@@ -88,7 +89,6 @@ static char	*ft_sb_build(t_string_builder *sb)
 
 	if (!sb->buffer)
 		return (NULL);                
-			// Si hubo un error en la inicialización o crecimiento
 	final_str = ft_strdup(sb->buffer); // Duplicar la cadena final
 	free(sb->buffer);                  // Liberar el buffer interno del builder
 	sb->buffer = NULL;
@@ -107,6 +107,7 @@ static char	*extract_and_get_value(const char *s, int *start_of_var_idx,
 	char	*var_value;
 
 	temp_i = *start_of_var_idx;
+
 	while (s[temp_i] && (ft_isalnum(s[temp_i]) || s[temp_i] == '_'))
 		temp_i++;
 	var_name = ft_substr(s, *start_of_var_idx, temp_i - *start_of_var_idx);
@@ -134,11 +135,9 @@ static void	handle_special_dollar(t_string_builder *sb, const char *s, int *i,
 		}
 		(*i) += 2; // Move past $?
 	}
-	else if (ft_isdigit(s[*i + 1])) // $0, $1, etc. (positional parameters)
+	else if (ft_isdigit(s[*i + 1])) // $0, $1, etc. are not supported, expand to empty
 	{
-		ft_sb_append_char(sb, '$');
-		ft_sb_append_char(sb, s[*i + 1]);
-		(*i) += 2; // Move past $ and digit
+		(*i) += 2; // Just skip the $ and the digit
 	}
 	else // Literal '$' (e.g., $ followed by non-var char, or just $)
 	{
@@ -186,28 +185,28 @@ static void	process_dollar_expansion(t_string_builder *sb, const char *s,
 	}
 }
 
-// --- Funciones de Expansión ---
-
 /**
  * @brief Expande variables en una cadena y ELIMINA las comillas.
  * Usado para argumentos de comandos y nombres de archivo de redirección.
  */
 char	*expand_and_remove_quotes(char *original_str, t_struct *mini)
 {
-	t_string_builder	sb;
-	int					i;
-	char				current_quote_char;
+	t_string_builder		sb;
+	int				i;
+	char			current_quote_char;
 
 	if (!original_str)
 		return (ft_strdup(""));
-	ft_sb_init(&sb);
+
+ft_sb_init(&sb);
 	if (!sb.buffer)
 		return (NULL);
 	i = 0;
 	current_quote_char = 0;
+
 	while (original_str[i])
 	{
-		if (original_str[i] == '\'' || original_str[i] == '\"')
+		if (original_str[i] == '\'' || original_str[i] == '"')
 		{
 			if (current_quote_char == 0)
 				current_quote_char = original_str[i];
@@ -230,11 +229,13 @@ char	*expand_and_remove_quotes(char *original_str, t_struct *mini)
 char	*expand_heredoc_line(char *line, t_struct *mini)
 {
 	t_string_builder	sb;
-	int					i;
+	int				i;
 
 	if (!line)
 		return (NULL);
-	ft_sb_init(&sb);
+
+
+ft_sb_init(&sb);
 	if (!sb.buffer)
 		return (NULL);
 	i = 0;
@@ -250,37 +251,95 @@ char	*expand_heredoc_line(char *line, t_struct *mini)
 	return (ft_sb_build(&sb));
 }
 
-/**
- * @brief Bucle principal de expansión. Procesa argumentos y delimitadores de heredoc.
- */
+static char	**list_to_argv(t_list *lst)
+{
+	char	**argv;
+	int		size;
+	int		i;
+
+	size = ft_lstsize(lst);
+	argv = (char **)ft_calloc(size + 1, sizeof(char *));
+	if (!argv)
+		return (NULL);
+	i = 0;
+	while (lst)
+	{
+		argv[i] = (char *)lst->content;
+		lst = lst->next;
+		i++;
+	}
+	return (argv);
+}
+
+static void	free_argv(char **argv)
+{
+	int		i;
+
+	if (!argv)
+		return ;
+	i = 0;
+	while (argv[i])
+	{
+		free(argv[i]);
+		i++;
+	}
+	free(argv);
+}
+
 void	expand_variables(t_command *cmd_list, t_struct *mini)
 {
 	t_command		*cmd;
 	t_redirection	*redir;
 	char			*expanded_str;
 	int				i;
+	t_list			*new_args_list;
+	bool		was_quoted;
 
 	cmd = cmd_list;
 	while (cmd)
 	{
-		i = 0;
-		while (cmd->args && cmd->args[i])
+		new_args_list = NULL;
+		if (cmd->args)
 		{
-			expanded_str = expand_and_remove_quotes(cmd->args[i], mini);
-			free(cmd->args[i]);
-			cmd->args[i++] = expanded_str;
+			i = -1;
+			while (cmd->args[++i])
+			{
+				was_quoted = ft_strchr(cmd->args[i], '\'')
+					|| ft_strchr(cmd->args[i], '"');
+				expanded_str = expand_and_remove_quotes(cmd->args[i], mini);
+				if (!expanded_str)
+					expanded_str = ft_strdup("");
+				if (!expanded_str)
+					continue;
+				if (!was_quoted && ft_strchr(expanded_str, ' '))
+				{
+					char	**split_args = ft_split(expanded_str, ' ');
+					free(expanded_str);
+					if (split_args)
+					{
+						int j = -1;
+						while (split_args[++j])
+							ft_lstadd_back(&new_args_list, ft_lstnew(split_args[j]));
+						free(split_args);
+					}
+				}
+				else
+					ft_lstadd_back(&new_args_list, ft_lstnew(expanded_str));
+			}
+			free_argv(cmd->args);
+			cmd->args = list_to_argv(new_args_list);
+			cmd->num_args = ft_lstsize(new_args_list);
+			ft_lstclear(&new_args_list, NULL);
 		}
 		redir = cmd->redirections;
 		while (redir)
 		{
-			// El delimitador de Heredoc SIEMPRE se expande/limpia de comillas.
-			// La expansión del CONTENIDO se decide en el parser.
-			if (redir->type == REDIR_HEREDOC)
-				expanded_str = expand_and_remove_quotes(redir->file, mini);
-			else // Los nombres de archivo también se expanden
-				expanded_str = expand_and_remove_quotes(redir->file, mini);
-			free(redir->file);
-			redir->file = expanded_str;
+			expanded_str = expand_and_remove_quotes(redir->file, mini);
+			if (expanded_str)
+			{
+				free(redir->file);
+				redir->file = expanded_str;
+			}
 			redir = redir->next;
 		}
 		cmd = cmd->next;

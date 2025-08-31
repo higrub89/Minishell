@@ -15,4 +15,6 @@ typedef struct s_string_builder
 void expand_variables(t_command *cmd_list, t_struct *mini);
 char	*expand_heredoc_line(char *line, t_struct *mini);
 
+void	perform_word_splitting(t_command *cmd_list);
+
 # endif

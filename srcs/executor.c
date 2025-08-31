@@ -40,16 +40,7 @@ static char *get_path_var(char **envp)
     return (NULL);
 }
 
-static char **get_default_paths(void)
-{
-    char **paths;
 
-    paths = ft_split("/usr/local/bin:/usr/bin:/bin", ':');
-    if (!paths)
-        return (NULL);
-    add_slash_to_paths(paths);
-    return (paths);
-}
 
 char **get_paths(char **envp)
 {
@@ -58,7 +49,7 @@ char **get_paths(char **envp)
 
     path_var = get_path_var(envp);
     if (!path_var || *path_var == '\0')
-        return (get_default_paths());
+        return (NULL);
     paths = ft_split(path_var, ':');
     if (!paths)
         return (NULL);

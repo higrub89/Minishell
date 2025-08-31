@@ -79,7 +79,10 @@ char	**add_to_export_list(char **export_list, char *var)
 	if (!new_list)
 		return (export_list);
 	while (j < i)
-		new_list[j] = ft_strdup(export_list[j]); //importante asignar memoria. Si no pierde la cabeza del puntero.		j++;
+	{
+		new_list[j] = ft_strdup(export_list[j]); //importante asignar memoria. Si no pierde la cabeza del puntero.
+		j++;
+	}
 	new_list[i] = ft_strdup(var);
 	new_list[i + 1] = NULL;
 	free_str_array(export_list);

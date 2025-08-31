@@ -1,58 +1,80 @@
-#include "../inc/main_utils.h" // Incluye main_utils.h, que a su vez incluye minishell.h
-#include "../inc/env_utils.h"  // Necesario para ft_copy_str_array y free_str_array
+#include "../inc/main_utils.h"
+#include "../inc/env_utils.h"
 
-/**
- * @brief Inicializa la estructura principal de la minishell.
- * Realiza una copia del entorno original y establece el estado de salida inicial.
- * @param mini Puntero a la estructura t_minishell a inicializar.
- * @param envp_main El entorno recibido de la función main (char **envp).
- * @return 0 en éxito, 1 en caso de error de asignación de memoria.
- */
+static int is_all_digits(const char *s)
+{
+    if (!s || !*s)
+        return (0);
+    while (*s)
+    {
+        if (!ft_isdigit(*s))
+            return (0);
+        s++;
+    }
+    return (1);
+}
+
+static void manage_shlvl(t_struct *mini)
+{
+    char *current_shlvl_str;
+    int shlvl_num;
+    char *new_shlvl_val;
+
+    current_shlvl_str = get_env_value("SHLVL", mini);
+    shlvl_num = 1;
+    if (current_shlvl_str && is_all_digits(current_shlvl_str))
+    {
+        shlvl_num = ft_atoi(current_shlvl_str) + 1;
+        if (shlvl_num < 1)
+            shlvl_num = 1;
+    }
+    free(current_shlvl_str);
+    new_shlvl_val = ft_itoa(shlvl_num);
+    if (new_shlvl_val)
+    {
+        ft_setenv_var(mini, "SHLVL", new_shlvl_val);
+        free(new_shlvl_val);
+    }
+}
+
 int init_minishell(t_struct *mini, char **envp_main)
 {
-    // Usa ft_copy_str_array de env_utils.c para crear una copia mutable del entorno.
     mini->envp = ft_copy_str_array(envp_main);
     if (!mini->envp)
     {
         perror("minishell: failed to copy environment");
-        return (1); // Indica fallo de inicialización
+        return (1);
     }
-    mini->last_exit_status = 0;  // Estado de salida inicial por defecto
+    manage_shlvl(mini);
+    mini->last_exit_status = 0;
+    mini->export_list = NULL;
     mini->should_exit = false;
-    return (0); // Indica éxito
+    return (0);
 }
 
-/**
- * @brief Limpia y libera toda la memoria asignada por la minishell antes de salir.
- * Libera la copia del entorno mantenida por la minishell.
- * @param mini Puntero a la estructura t_minishell a limpiar.
- */
 void cleanup_minishell(t_struct *mini)
 {
-    if (mini && mini->envp) // Asegúrate de que mini y envp existan antes de intentar liberar
+    if (mini && mini->envp)
     {
-        free_str_array(mini->envp); // Usa free_str_array de env_utils.c
-        mini->envp = NULL; // Establecer a NULL previene doble liberación accidental
+        free_str_array(mini->envp);
+        mini->envp = NULL;
     }
-    // Si la estructura t_minishell contuviera otros punteros asignados dinámicamente,
-    // deberían ser liberados aquí también.
+    if (mini && mini->export_list)
+    {
+        free_str_array(mini->export_list);
+        mini->export_list = NULL;
+    }
 }
 
-/**
- * @brief Verifica si una cadena contiene solo caracteres de espacio en blanco.
- * Utiliza ft_isspace de tu libft (o la estándar isspace).
- * @param s La cadena a verificar.
- * @return 1 si la cadena es nula, vacía o solo contiene espacios en blanco, 0 en caso contrario.
- */
 int ft_str_is_whitespace(const char *s)
 {
-    if (!s) // Una cadena nula podría considerarse "vacía" para este propósito.
+    if (!s)
         return (1);
     while (*s)
     {
-        if (!ft_isspace(*s)) // `ft_isspace` debe estar en tu libft
-            return (0); // Encontrado un carácter que no es espacio en blanco
+        if (!ft_isspace(*s))
+            return (0);
         s++;
     }
-    return (1); // Todos los caracteres eran espacios en blanco o la cadena estaba vacía
+    return (1);
 }
