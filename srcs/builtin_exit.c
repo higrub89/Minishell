@@ -131,9 +131,5 @@ int	ft_exit(t_struct *mini, char **args)
 		mini->last_exit_status = (unsigned char)exit_code;
 		mini->should_exit = true;
 	}
-    if (mini->should_exit)
-    {
-        free_str_array(mini->envp);
-    }
 	return mini->last_exit_status;
 }
