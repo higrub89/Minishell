@@ -198,6 +198,7 @@ char	*expand_and_remove_quotes(char *original_str, t_struct *mini)
 	if (!original_str)
 		return (ft_strdup(""));
 
+
 ft_sb_init(&sb);
 	if (!sb.buffer)
 		return (NULL);
@@ -212,7 +213,9 @@ ft_sb_init(&sb);
 				current_quote_char = original_str[i];
 			else if (current_quote_char == original_str[i])
 				current_quote_char = 0;
-			i++; // Saltar la comilla, no la añadimos al resultado
+			else
+				ft_sb_append_char(&sb, original_str[i]);
+			i++;
 			continue ;
 		}
 		if (original_str[i] == '$')
@@ -229,10 +232,11 @@ ft_sb_init(&sb);
 char	*expand_heredoc_line(char *line, t_struct *mini)
 {
 	t_string_builder	sb;
-	int				i;
+	int			i;
 
 	if (!line)
 		return (NULL);
+
 
 
 ft_sb_init(&sb);
@@ -280,8 +284,7 @@ static void	free_argv(char **argv)
 	i = 0;
 	while (argv[i])
 	{
-		free(argv[i]);
-		i++;
+		free(argv[i++]);
 	}
 	free(argv);
 }
@@ -293,7 +296,7 @@ void	expand_variables(t_command *cmd_list, t_struct *mini)
 	char			*expanded_str;
 	int				i;
 	t_list			*new_args_list;
-	bool		was_quoted;
+	bool			was_quoted;
 
 	cmd = cmd_list;
 	while (cmd)
@@ -328,8 +331,11 @@ void	expand_variables(t_command *cmd_list, t_struct *mini)
 			}
 			free_argv(cmd->args);
 			cmd->args = list_to_argv(new_args_list);
+			if (!cmd->args)
+				ft_lstclear(&new_args_list, free);
+			else
+				ft_lstclear(&new_args_list, NULL);
 			cmd->num_args = ft_lstsize(new_args_list);
-			ft_lstclear(&new_args_list, NULL);
 		}
 		redir = cmd->redirections;
 		while (redir)

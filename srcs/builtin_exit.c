@@ -106,15 +106,18 @@ int	ft_exit(t_struct *mini, char **args)
 	ft_putendl_fd("exit", STDOUT_FILENO);
 	while (args[num_args])
 		num_args++;
-	mini->should_exit = true;
 	if (num_args == 1)
+	{
+		mini->should_exit = true;
 		return mini->last_exit_status;
+	}
 	if (!is_numeric(args[1]) || will_overflow(args[1]))
 	{
 		ft_putstr_fd("minishell: exit: ", STDERR_FILENO);
 		ft_putstr_fd(args[1], STDERR_FILENO);
 		ft_putendl_fd(": numeric argument required", STDERR_FILENO);
 		mini->last_exit_status = 255;
+		mini->should_exit = true;
 	}
 	else if (num_args > 2)
 	{
@@ -126,6 +129,11 @@ int	ft_exit(t_struct *mini, char **args)
 	{
 		exit_code = safe_atoll(args[1]);
 		mini->last_exit_status = (unsigned char)exit_code;
+		mini->should_exit = true;
 	}
+    if (mini->should_exit)
+    {
+        free_str_array(mini->envp);
+    }
 	return mini->last_exit_status;
 }

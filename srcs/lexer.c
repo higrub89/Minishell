@@ -131,39 +131,29 @@ static int	handle_pipe(const char *input, int i, t_token **head,
 	return (i + 1);
 }
 
-static int	skip_quotes(const char *input, int i, char quote_char)
+static int	extract_word(const char *input, int i, t_struct *mini)
 {
-	i++;
-	while (input[i] && input[i] != quote_char)
-		i++;
-	if (input[i] == quote_char)
-		i++;
-	else
-		return (-1); // Error: comilla sin cerrar
-	return (i);
-}
+	char	in_quote;
 
-static int	extract_word(const char *input, int i,
-		t_struct *mini)
-{
-	int	new_i;
-
-	while (input[i] && input[i] != ' ' && input[i] != '\t' && input[i] != '<'
-		&& input[i] != '>' && input[i] != '|')
+	in_quote = 0;
+	while (input[i])
 	{
-		if (input[i] == '\'' || input[i] == '\"')
+		if (in_quote)
 		{
-			new_i = skip_quotes(input, i, input[i]);
-			if (new_i == -1)
-			{
-				fprintf(stderr, "minishell: Syntax error: unclosed quote\n");
-				mini->last_exit_status = 258;
-				return (-1);
-			}
-			i = new_i;
+			if (input[i] == in_quote)
+				in_quote = 0;
 		}
-		else
-			i++;
+		else if (input[i] == '\'' || input[i] == '"' )
+			in_quote = input[i];
+		else if (ft_strchr(" \t<>|", input[i]))
+			break ;
+		i++;
+	}
+	if (in_quote)
+	{
+		fprintf(stderr, "minishell: Syntax error: unclosed quote\n");
+		mini->last_exit_status = 258;
+		return (-1);
 	}
 	return (i);
 }

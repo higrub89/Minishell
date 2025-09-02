@@ -1,6 +1,74 @@
 #include "../inc/builtins.h"
 #include "../inc/executor.h"
 
+// --- FORWARD DECLARATIONS ---
+static int	read_heredoc_input(t_redirection *redir, t_struct *mini);
+
+// --- HEREDOC PROCESSING ---
+
+int	process_heredocs(t_command *commands, t_struct *mini)
+{
+	t_command		*cmd;
+	t_redirection	*redir;
+
+	cmd = commands;
+	while (cmd)
+	{
+		redir = cmd->redirections;
+		while (redir)
+		{
+			if (redir->type == REDIR_HEREDOC)
+			{
+				if (cmd->heredoc_fd != -1)
+					close(cmd->heredoc_fd);
+				cmd->heredoc_fd = read_heredoc_input(redir, mini);
+				if (cmd->heredoc_fd == -1)
+					return (1); // Error reading heredoc
+			}
+			redir = redir->next;
+		}
+		cmd = cmd->next;
+	}
+	return (0);
+}
+
+static int	read_heredoc_input(t_redirection *redir, t_struct *mini)
+{
+	int		pipe_fds[2];
+	char	*line;
+
+	if (pipe(pipe_fds) == -1)
+		return (perror("minishell: pipe"), -1);
+	while (1)
+	{
+		line = readline("> ");
+		if (!line)
+		{
+			ft_putstr_fd("minishell: warning: here-document delimited by end-of-file (wanted `", STDERR_FILENO);
+			ft_putstr_fd(redir->file, STDERR_FILENO);
+			ft_putendl_fd("')", STDERR_FILENO);
+			break ;
+		}
+		if (ft_strcmp(line, redir->file) == 0)
+		{
+			free(line);
+			break ;
+		}
+		if (redir->expand_heredoc_content)
+		{
+			char *expanded_line = expand_heredoc_line(line, mini);
+			free(line);
+			line = expanded_line;
+		}
+		ft_putendl_fd(line, pipe_fds[1]);
+		free(line);
+	}
+	close(pipe_fds[1]);
+	return (pipe_fds[0]);
+}
+
+// --- PATH AND COMMAND UTILS ---
+
 static void add_slash_to_paths(char **paths)
 {
     int i;
@@ -39,8 +107,6 @@ static char *get_path_var(char **envp)
     }
     return (NULL);
 }
-
-
 
 char **get_paths(char **envp)
 {
@@ -88,6 +154,8 @@ char *find_cmd_path(char **cmd_args, char **paths)
     }
     return (NULL);
 }
+
+// --- REDIRECTION HANDLING ---
 
 static int dup2_and_close(int oldfd, int newfd)
 {
@@ -182,6 +250,8 @@ int handle_redirections_in_child(t_command *cmd)
     return (apply_final_fds(last_in_fd, last_out_fd));
 }
 
+// --- CHILD PROCESS AND EXECUTION ---
+
 static void setup_child_pipes(t_command *cmd, int *pipe_fds,
     int prev_pipe_in_fd)
 {
@@ -227,8 +297,18 @@ static void child_execute_command(t_command *cmd, t_struct *mini)
 {
     if (handle_redirections_in_child(cmd) != 0)
         exit(1);
-    if (!cmd->args || !cmd->args[0] || cmd->args[0][0] == '\0')
+
+    if (!cmd->args || !cmd->args[0])
         exit(0);
+
+    if (cmd->args[0][0] == '\0')
+    {
+        ft_putstr_fd("minishell: ", STDERR_FILENO);
+        ft_putstr_fd(cmd->args[0], STDERR_FILENO);
+        ft_putendl_fd(": command not found", STDERR_FILENO);
+        exit(127);
+    }
+
     if (is_builtin(cmd->args[0]))
     {
         execute_builtin(cmd, mini);
@@ -236,6 +316,8 @@ static void child_execute_command(t_command *cmd, t_struct *mini)
     }
     execute_external_command(cmd, mini);
 }
+
+// --- PARENT PROCESS AND PIPELINE MANAGEMENT ---
 
 static void parent_cleanup(t_command *cmd, int *pipe_fds, int *prev_pipe_in_fd,
     pid_t child_pid, pid_t *child_pids, int cmd_idx)
@@ -257,7 +339,6 @@ static void parent_cleanup(t_command *cmd, int *pipe_fds, int *prev_pipe_in_fd,
     }
 }
 
-// CORREGIDO: Esta función ya NO libera child_pids
 static void wait_for_children(pid_t *child_pids, int num_commands,
     t_struct *mini)
 {
@@ -437,30 +518,37 @@ static int execute_pipeline(t_command *cmds, t_struct *mini, pid_t *child_pids,
     return (0);
 }
 
+// --- MAIN EXECUTION FUNCTION ---
+
 int execute_commands(t_command *commands, t_struct *mini)
 {
     pid_t *child_pids;
     int num_commands;
     int result;
 
-    if (!commands->args || !commands->args[0])
-    {
-        if (commands->redirections) // AHORA MANEJAMOS ESTE CASO ESPECÍFICO
-            return (handle_single_redirection_only(commands, mini));
-        else // Ni argumentos ni redirecciones, es una línea vacía
-            return (0);
-    }
+    if (process_heredocs(commands, mini) != 0)
+        return (1);
+
+    if ((!commands->args || !commands->args[0]) && commands->redirections && !commands->next)
+        return (handle_single_redirection_only(commands, mini));
+    
+    if ((!commands->args || !commands->args[0]) && !commands->redirections)
+        return (0);
+
     num_commands = init_pipeline(commands, &child_pids);
     if (num_commands == -1)
         return (mini->last_exit_status = 1, 1);
-    if (num_commands == 1 && commands->args && commands->args[0]
-        && is_builtin(commands->args[0]))
+
+    if (num_commands == 1 && commands->args && commands->args[0] && is_builtin(commands->args[0]))
         result = handle_single_builtin(commands, mini);
     else
         result = execute_pipeline(commands, mini, child_pids, num_commands);
+
     free(child_pids);
     return (result);
 }
+
+// --- BUILTIN UTILS ---
 
 int is_builtin(char *cmd_name)
 {

@@ -61,13 +61,6 @@ int main(int argc, char **argv, char **envp_main)
         
         // 5. Expander: Expandir variables de entorno y tildes en los argumentos y redirecciones
         // El expander necesita 'mini' para acceder a 'mini->envp' y 'mini->last_exit_status'.
-        if (process_heredoc_input(commands, &mini))
-        {
-            // Si hubo un error al procesar heredocs, se actualiza el estado de salida en process_heredoc_input
-            free_commands(commands); // Liberar la lista de comandos antes de continuar
-            free(input_line);        // Liberar la línea leída por readline
-            continue ; // Volver al inicio del bucle
-        }
         expand_variables(commands, &mini); 
 
         // 6. Executor: Ejecutar la lista de comandos (maneja pipes, redirecciones, builtins y externos)

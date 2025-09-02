@@ -206,6 +206,9 @@ t_command	*parse_input(t_token *token_list, t_struct *mini)
 			tok = process_redirection(tok, current_cmd, mini);
 		else if (tok->type == PIPE)
         {
+			if (current_cmd->num_args == 0 && current_cmd->num_redirections > 0)
+				if (!add_arg_to_command(current_cmd, "cat"))
+					return (free_commands(cmd_head), NULL);
 			if (current_cmd->num_args == 0 && current_cmd->num_redirections == 0)
                 return (free_commands(cmd_head), set_syntax_error("|", mini));
 			tok = tok->next;
@@ -220,6 +223,9 @@ t_command	*parse_input(t_token *token_list, t_struct *mini)
 		if (mini->last_exit_status == 258)
             return (free_commands(cmd_head), NULL);
 	}
+	if (current_cmd->num_args == 0 && current_cmd->num_redirections > 0)
+		if (!add_arg_to_command(current_cmd, "cat"))
+			return (free_commands(cmd_head), NULL);
 	if (current_cmd->num_args == 0 && current_cmd->num_redirections == 0)
 		return (free_commands(cmd_head), set_syntax_error("newline", mini));
 	return (cmd_head);

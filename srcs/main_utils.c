@@ -54,6 +54,7 @@ int init_minishell(t_struct *mini, char **envp_main)
 
 void cleanup_minishell(t_struct *mini)
 {
+    rl_clear_history(); // Limpiar historial de readline
     if (mini && mini->envp)
     {
         free_str_array(mini->envp);
