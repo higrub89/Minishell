@@ -33,7 +33,8 @@ COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/executor/redirection_executor_utils.c \
 									srcs/executor/redirection_executor_handler.c \
 									srcs/main_utils.c \
-									srcs/env_utils.c \
+									srcs/env/env_utils.c \
+									srcs/env/array_copy.c \
 									srcs/builtins/builtin_unset.c \
 									srcs/builtins/builtin_pwd.c \
 									srcs/builtins/builtin_export.c \
