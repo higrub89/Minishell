@@ -23,16 +23,23 @@ COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/parser/parser_cleanup.c \
 									srcs/redirection.c \
 									srcs/expander.c \
-									srcs/executor.c \
+									srcs/executor/executor.c \
+									srcs/executor/builtin_handler.c \
+									srcs/executor/cmd_utils_one.c \
+									srcs/executor/cmd_utils_two.c \
+									srcs/executor/pipeline_utils.c \
+									srcs/executor/redirection_executor.c \
+									srcs/executor/redirection_executor_utils.c \
+									srcs/executor/redirection_executor_handler.c \
 									srcs/main_utils.c \
 									srcs/env_utils.c \
-									srcs/builtin_unset.c \
-									srcs/builtin_pwd.c \
-									srcs/builtin_export.c \
-									srcs/builtin_exit.c \
-									srcs/builtin_env.c \
-									srcs/builtin_echo.c \
-									srcs/builtin_cd.c \
+									srcs/builtins/builtin_unset.c \
+									srcs/builtins/builtin_pwd.c \
+									srcs/builtins/builtin_export.c \
+									srcs/builtins/builtin_exit.c \
+									srcs/builtins/builtin_env.c \
+									srcs/builtins/builtin_echo.c \
+									srcs/builtins/builtin_cd.c \
 									srcs/signals.c \
 
 # Concatenate all source files

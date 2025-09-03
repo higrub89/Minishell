@@ -10,7 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../../inc/lexer.h"
+#include "../../inc/minishell.h"
+#include "../../libft/inc/libft.h"
+#include <stdlib.h>
 
 t_token	*create_new_token(char *value, t_token_type type)
 {
