@@ -21,7 +21,8 @@ COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/parser/parser.c \
 									srcs/parser/parser_utils.c \
 									srcs/parser/parser_cleanup.c \
-									srcs/redirection.c \
+									srcs/redirections/redirection.c \
+									srcs/redirections/heredoc_utils.c \
 									srcs/expander.c \
 									srcs/executor/executor.c \
 									srcs/executor/builtin_handler.c \
