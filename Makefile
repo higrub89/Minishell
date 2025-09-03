@@ -14,7 +14,10 @@ RM					= rm -f
 
 # Source Files
 COMMANDS_DIR		=	srcs/minishell.c \
-									srcs/lexer.c \
+									srcs/lexer/lexer.c \
+									srcs/lexer/token_utils.c \
+									srcs/lexer/words_handler.c \
+									srcs/lexer/redirection_handler.c \
 									srcs/parser.c \
 									srcs/redirection.c \
 									srcs/expander.c \
