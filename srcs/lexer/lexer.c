@@ -39,7 +39,7 @@ int	lexer_process_token(t_lexer_ctx *ctx, int i)
 	else if (ctx->input[i] == '>')
 		return (handle_redirection_out(ctx->input, i, ctx->head, ctx->current));
 	else if (ctx->input[i] == '|')
-		return (handle_pipe(ctx->input, i, ctx->head, ctx->current));
+		return (lexer_handle_pipe(ctx->input, i, ctx->head, ctx->current));
 	return (handle_word(ctx, i));
 }
 

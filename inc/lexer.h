@@ -35,7 +35,7 @@ int				handle_redirection_in(const char *input, int i, t_token **head,
 					t_token **current);
 int				handle_redirection_out(const char *input, int i, t_token **head,
 					t_token **current);
-int				handle_pipe(const char *input, int i, t_token **head,
+int				lexer_handle_pipe(const char *input, int i, t_token **head,
 					t_token **current);
 
 // token_utils.c

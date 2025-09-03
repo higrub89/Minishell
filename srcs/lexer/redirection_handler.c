@@ -52,7 +52,7 @@ int	handle_redirection_out(const char *input, int i, t_token **head,
 	return (i + 1);
 }
 
-int	handle_pipe(const char *input, int i, t_token **head, t_token **current)
+int	lexer_handle_pipe(const char *input, int i, t_token **head, t_token **current)
 {
 	t_token	*new_token;
 

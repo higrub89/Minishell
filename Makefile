@@ -18,7 +18,9 @@ COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/lexer/token_utils.c \
 									srcs/lexer/words_handler.c \
 									srcs/lexer/redirection_handler.c \
-									srcs/parser.c \
+									srcs/parser/parser.c \
+									srcs/parser/parser_utils.c \
+									srcs/parser/parser_cleanup.c \
 									srcs/redirection.c \
 									srcs/expander.c \
 									srcs/executor.c \
