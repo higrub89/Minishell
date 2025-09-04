@@ -3,14 +3,15 @@
 /*                                                        :::      ::::::::   */
 /*   redirection_executor.c                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
+/*   By: rhiguita <rhiguita@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/03 04:37:14 by rhiguita          #+#    #+#             */
-/*   Updated: 2025/09/03 04:37:16 by rhiguita         ###   ########.fr       */
+/*   Updated: 2025/09/04 03:15:40 by rhiguita         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../inc/executor.h"
+#include "../inc/expander.h"
 
 int	process_heredocs(t_command *commands, t_struct *mini)
 {

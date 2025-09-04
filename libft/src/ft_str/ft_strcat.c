@@ -14,7 +14,7 @@
 
 char	*ft_strcat(char *des, const char *src)
 {
-	char *ptr;
+	char	*ptr;
 
 	ptr = des;
 	while (*ptr != '\0')

@@ -23,7 +23,10 @@ COMMANDS_DIR		=	srcs/minishell.c \
 									srcs/parser/parser_cleanup.c \
 									srcs/redirections/redirection.c \
 									srcs/redirections/heredoc_utils.c \
-									srcs/expander.c \
+									srcs/expander/expander.c \
+									srcs/expander/expander_dollar.c \
+									srcs/expander/expander_utils.c \
+									srcs/expander/string_builder.c \
 									srcs/executor/executor.c \
 									srcs/executor/builtin_handler.c \
 									srcs/executor/cmd_utils_one.c \
