@@ -13,25 +13,6 @@
 #include "../inc/builtins.h"
 #include "../inc/executor.h"
 
-void	setup_child_pipes(t_command *cmd, int *pipe_fds,
-		int prev_pipe_in_fd)
-{
-	if (prev_pipe_in_fd != -1)
-	{
-		if (dup2_and_close(prev_pipe_in_fd, STDIN_FILENO) != 0)
-			exit(1);
-	}
-	if (cmd->next)
-	{
-		if (dup2_and_close(pipe_fds[1], STDOUT_FILENO) != 0)
-			exit(1);
-	}
-	if (cmd->next)
-	{
-		close(pipe_fds[0]);
-	}
-}
-
 void	parent_cleanup(t_command *cmd, t_exec_data *d)
 {
 	d->child_pids[d->cmd_idx] = d->pid;
@@ -51,23 +32,40 @@ void	parent_cleanup(t_command *cmd, t_exec_data *d)
 	}
 }
 
-void	wait_for_children(pid_t *child_pids, int num_commands,
-		t_struct *mini)
+static void	handle_child_status(t_command *cmd, int status, t_struct *mini,
+		int is_last)
 {
-	int	status;
-	int	i;
+	if (WIFEXITED(status))
+	{
+		mini->last_exit_status = WEXITSTATUS(status);
+		if (WEXITSTATUS(status) == 127 && cmd && cmd->args[0])
+		{
+			ft_putstr_fd("minishell: ", STDERR_FILENO);
+			ft_putstr_fd(cmd->args[0], STDERR_FILENO);
+			ft_putendl_fd(": command not found", STDERR_FILENO);
+		}
+	}
+	else if (WIFSIGNALED(status))
+		mini->last_exit_status = 128 + WTERMSIG(status);
+	if (!is_last)
+		mini->last_exit_status = 0;
+}
+
+void	wait_for_children(t_command *cmds, pid_t *child_pids,
+		int num_commands, t_struct *mini)
+{
+	int			status;
+	int			i;
+	t_command	*current_cmd;
 
 	i = 0;
+	current_cmd = cmds;
 	while (i < num_commands)
 	{
 		waitpid(child_pids[i], &status, 0);
-		if (i == num_commands - 1)
-		{
-			if (WIFEXITED(status))
-				mini->last_exit_status = WEXITSTATUS(status);
-			else if (WIFSIGNALED(status))
-				mini->last_exit_status = 128 + WTERMSIG(status);
-		}
+		handle_child_status(current_cmd, status, mini, i == num_commands - 1);
+		if (current_cmd)
+			current_cmd = current_cmd->next;
 		i++;
 	}
 }

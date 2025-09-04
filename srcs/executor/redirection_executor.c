@@ -13,6 +13,14 @@
 #include "../inc/executor.h"
 #include "../inc/expander.h"
 
+void	restore_fds(int stdin_fd, int stdout_fd)
+{
+	dup2(stdin_fd, STDIN_FILENO);
+	close(stdin_fd);
+	dup2(stdout_fd, STDOUT_FILENO);
+	close(stdout_fd);
+}
+
 int	process_heredocs(t_command *commands, t_struct *mini)
 {
 	t_command		*cmd;

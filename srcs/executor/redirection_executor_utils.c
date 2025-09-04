@@ -13,6 +13,24 @@
 #include "../inc/builtins.h"
 #include "../inc/executor.h"
 
+void	setup_child_pipes(t_command *cmd, int *pipe_fds, int prev_pipe_in_fd)
+{
+	if (prev_pipe_in_fd != -1)
+	{
+		if (dup2_and_close(prev_pipe_in_fd, STDIN_FILENO) != 0)
+			exit(1);
+	}
+	if (cmd->next)
+	{
+		if (dup2_and_close(pipe_fds[1], STDOUT_FILENO) != 0)
+			exit(1);
+	}
+	if (cmd->next)
+	{
+		close(pipe_fds[0]);
+	}
+}
+
 int	process_redirections(t_command *cmd, int *last_in_fd,
 		int *last_out_fd)
 {
@@ -55,14 +73,6 @@ void	close_heredoc(t_command *cmd)
 		close(cmd->heredoc_fd);
 		cmd->heredoc_fd = -1;
 	}
-}
-
-void	restore_fds(int stdin_fd, int stdout_fd)
-{
-	dup2(stdin_fd, STDIN_FILENO);
-	close(stdin_fd);
-	dup2(stdout_fd, STDOUT_FILENO);
-	close(stdout_fd);
 }
 
 int	handle_single_redirection_only(t_command *cmd, t_struct *mini)

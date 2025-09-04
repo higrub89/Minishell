@@ -60,7 +60,7 @@ int	execute_pipeline(t_command *cmds, t_struct *mini, pid_t *child_pids,
 			parent_process(curr, &d);
 		curr = curr->next;
 	}
-	wait_for_children(child_pids, num_commands, mini);
+	wait_for_children(cmds, child_pids, num_commands, mini);
 	return (0);
 }
 

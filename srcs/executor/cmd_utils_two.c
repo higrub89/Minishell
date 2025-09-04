@@ -46,9 +46,6 @@ void	execute_external_command(t_command *cmd, t_struct *mini)
 	cmd_path = find_cmd_path(cmd->args, paths);
 	if (!cmd_path)
 	{
-		ft_putstr_fd("minishell: ", STDERR_FILENO);
-		ft_putstr_fd(cmd->args[0], STDERR_FILENO);
-		ft_putendl_fd(": command not found", STDERR_FILENO);
 		free_str_array(paths);
 		exit(127);
 	}

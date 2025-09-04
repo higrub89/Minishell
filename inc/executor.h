@@ -42,8 +42,8 @@ int				execute_pipeline(t_command *cmds, t_struct *mini,
 
 // pipeline_utils.c
 void			parent_cleanup(t_command *cmd, t_exec_data *d);
-void			wait_for_children(pid_t *child_pids, int num_commands,
-					t_struct *mini);
+void			wait_for_children(t_command *cmds, pid_t *child_pids,
+					int num_commands, t_struct *mini);
 int				init_pipeline(t_command *commands, pid_t **child_pids_ptr);
 void			handle_fork_error(t_command *current_cmd, t_exec_data *d);
 void			setup_child_pipes(t_command *cmd, int *pipe_fds,
