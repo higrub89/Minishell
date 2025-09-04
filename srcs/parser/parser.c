@@ -42,9 +42,6 @@ t_token	*process_redirection(t_token *tok, t_command *cmd,
 t_token	*handle_pipe(t_command **cmd, t_token *tok,
 	t_struct *mini, t_command *head)
 {
-	if ((*cmd)->num_args == 0 && (*cmd)->num_redirections > 0)
-		if (!add_arg_to_command(*cmd, "cat"))
-			return (free_commands(head), NULL);
 	if ((*cmd)->num_args == 0 && (*cmd)->num_redirections == 0)
 		return (free_commands(head), set_syntax_error("|", mini));
 	tok = tok->next;
@@ -66,9 +63,6 @@ t_token	*handle_pipe(t_command **cmd, t_token *tok,
 t_command	*finalize_cmds(t_command *head, t_command *curr,
 	t_struct *mini)
 {
-	if (curr->num_args == 0 && curr->num_redirections > 0)
-		if (!add_arg_to_command(curr, "cat"))
-			return (free_commands(head), NULL);
 	if (curr->num_args == 0 && curr->num_redirections == 0)
 		return (free_commands(head), set_syntax_error("newline", mini));
 	return (head);
