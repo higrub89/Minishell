@@ -58,8 +58,9 @@ static int	handle_exit_args(t_struct *mini, char **args)
 
 int	ft_exit(t_struct *mini, char **args)
 {
-	int status = 0;
+	int	status;
 
+	status = 0;
 	if (!mini->is_piped)
 		ft_putendl_fd("exit", STDOUT_FILENO);
 	mini->should_exit = true;

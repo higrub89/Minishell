@@ -82,5 +82,6 @@ typedef enum e_mode
 }							t_mode;
 
 void						set_signals(t_mode mode);
+int							ft_str_is_whitespace(const char *s);
 
 #endif

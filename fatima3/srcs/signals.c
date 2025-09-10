@@ -47,3 +47,16 @@ void	set_signals(t_mode mode)
 		signal(SIGQUIT, SIG_DFL);
 	}
 }
+
+int	ft_str_is_whitespace(const char *s)
+{
+	if (!s)
+		return (1);
+	while (*s)
+	{
+		if (!ft_isspace(*s))
+			return (0);
+		s++;
+	}
+	return (1);
+}

@@ -18,16 +18,19 @@ int	ft_cd(t_struct *mini, char **args);
 
 int	ft_cd_error(t_struct *mini, char *msg, char *path)
 {
+	ft_putstr_fd("minishell: cd: ", STDERR_FILENO);
+	if (path)
+		ft_putstr_fd(path, STDERR_FILENO);
 	if (msg)
 	{
-		ft_putstr_fd("minishell: cd: ", STDERR_FILENO);
-		if (path)
-			ft_putstr_fd(path, STDERR_FILENO);
 		ft_putstr_fd(": ", STDERR_FILENO);
 		ft_putendl_fd(msg, STDERR_FILENO);
 	}
 	else
-		perror("minishell: cd");
+	{
+		ft_putstr_fd(": ", STDERR_FILENO);
+		ft_putendl_fd(strerror(errno), STDERR_FILENO);
+	}
 	mini->last_exit_status = 1;
 	return (1);
 }
@@ -52,7 +55,7 @@ int	ft_cd(t_struct *mini, char **args)
 	char	*cwd;
 
 	target = args[1];
-	if (!target || target[0] == '\0'  || (ft_strncmp(target, "~", 2) == 0))
+	if (!target || target[0] == '\0' || (ft_strncmp(target, "~", 2) == 0))
 		return (go_home(mini));
 	if (ft_strncmp(target, "-", 2) == 0)
 		return (go_to_oldpwd(mini));

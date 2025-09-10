@@ -22,7 +22,7 @@ void	add_export_only(char **result, char **envp, char **export, int *i)
 {
 	int	j;
 
-    j = 0;
+	j = 0;
 	while (export && export[j])
 	{
 		if (is_in_envp(envp, export[j]) == 0)

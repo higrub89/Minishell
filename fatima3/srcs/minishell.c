@@ -10,14 +10,14 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../inc/minishell.h"
-#include "../inc/lexer.h"
-#include "../inc/parser.h"
-#include "../inc/main_utils.h"
 #include "../inc/executor.h"
+#include "../inc/lexer.h"
+#include "../inc/main_utils.h"
+#include "../inc/minishell.h"
+#include "../inc/parser.h"
 
 int	process_input(char *input, t_token **tokens, t_command **cmds,
-	t_struct *mini)
+		t_struct *mini)
 {
 	*tokens = lexer(input, mini);
 	if (!*tokens)
@@ -65,7 +65,7 @@ void	run_minishell_loop(t_struct *mini)
 	}
 }
 
-static int	handle_empty_env(t_struct *mini, char *arg) //agregada toda esta fx
+static int	handle_empty_env(t_struct *mini, char *arg)
 {
 	char	*cwd;
 	char	*tmp;
@@ -91,19 +91,19 @@ static int	handle_empty_env(t_struct *mini, char *arg) //agregada toda esta fx
 	return (0);
 }
 
-int	init_minishell(t_struct *mini, char **envp_main, char *arg) //lo moví aquí
+int	init_minishell(t_struct *mini, char **envp_main, char *arg)
 {
 	mini->envp = ft_copy_str_array(envp_main);
+	mini->export_list = NULL;
 	if (!mini->envp)
 	{
 		perror("minishell: failed to copy environment");
 		return (1);
 	}
-	if (!mini->envp[0] && handle_empty_env(mini, arg)) //agregado
-        return (1); //agregado
+	if (!mini->envp[0] && handle_empty_env(mini, arg))
+		return (1);
 	manage_shlvl(mini);
 	mini->last_exit_status = 0;
-	mini->export_list = NULL;
 	mini->should_exit = false;
 	return (0);
 }
@@ -114,7 +114,7 @@ int	main(int argc, char **argv, char **envp_main)
 
 	(void)argc;
 	(void)argv;
-	if (init_minishell(&mini, envp_main, argv[0]) != 0) // argv[0] agregado para saber la ruta al ejecutable de la mini
+	if (init_minishell(&mini, envp_main, argv[0]) != 0)
 		return (1);
 	run_minishell_loop(&mini);
 	cleanup_minishell(&mini);

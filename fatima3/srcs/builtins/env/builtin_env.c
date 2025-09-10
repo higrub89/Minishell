@@ -12,48 +12,15 @@
 
 #include "../../../inc/builtins.h"
 
-//ordenado
-/*int	ft_env(t_struct *mini, char **args)
-{
-	int		i;
-	char	**copy_envp;
-
-	i = 0;
-	if (!mini->envp[0])
-	{
-		ft_putendl_fd("minishell: env: No such file or directory", STDOUT_FILENO);
-		return (mini->last_exit_status = 0, 0);
-	}
-	if (args[1])
-	{
-		ft_putstr_fd("minishell: env: too many arguments\n", STDERR_FILENO);
-		mini->last_exit_status = 1;
-		return (1);
-	}
-	copy_envp = ft_copy_str_array(mini->envp);
-	if (!copy_envp)
-		return (mini->last_exit_status = 1, 1);	
-	sort_envp(copy_envp);
-	while (copy_envp[i])
-	{
-		if (ft_strchr(copy_envp[i], '='))
-			ft_putendl_fd(copy_envp[i], STDOUT_FILENO);
-		i++;
-	}
-	free_str_array(copy_envp);
-	mini->last_exit_status = 0;
-	return (0);
-}*/
-
-//sin ordenar:
 int	ft_env(t_struct *mini, char **args)
 {
-	int		i;
+	int	i;
 
 	i = 0;
 	if (!mini->envp[0])
 	{
-		ft_putendl_fd("minishell: env: No such file or directory", STDOUT_FILENO);
+		ft_putendl_fd("minishell: env: No such file or directory",
+			STDOUT_FILENO);
 		return (mini->last_exit_status = 0, 0);
 	}
 	if (args[1])
@@ -61,7 +28,7 @@ int	ft_env(t_struct *mini, char **args)
 		ft_putstr_fd("minishell: env: too many arguments\n", STDERR_FILENO);
 		mini->last_exit_status = 1;
 		return (1);
-	}	
+	}
 	while (mini->envp[i])
 	{
 		if (ft_strchr(mini->envp[i], '='))

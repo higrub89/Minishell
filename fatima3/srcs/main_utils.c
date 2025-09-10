@@ -10,9 +10,9 @@
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../inc/main_utils.h"
-#include "../inc/env_utils.h"
 #include "../inc/builtins.h"
+#include "../inc/env_utils.h"
+#include "../inc/main_utils.h"
 
 static int	is_all_digits(const char *s)
 {
@@ -50,14 +50,17 @@ void	manage_shlvl(t_struct *mini)
 	}
 }
 
-void	handle_underscore(t_struct *mini, char *arg) //agreagado toda la fx
+void	handle_underscore(t_struct *mini, char *arg)
 {
 	char	*underscore;
 	char	*args[3];
 
 	underscore = ft_strjoin("_=", arg);
 	if (!underscore)
+	{
+		mini->last_exit_status = 1;
 		return ;
+	}
 	args[0] = "export";
 	args[1] = underscore;
 	args[2] = NULL;
@@ -84,17 +87,4 @@ void	clean_and_exit(t_struct *mini, int status)
 {
 	cleanup_minishell(mini);
 	exit(status);
-}
-
-int	ft_str_is_whitespace(const char *s)
-{
-	if (!s)
-		return (1);
-	while (*s)
-	{
-		if (!ft_isspace(*s))
-			return (0);
-		s++;
-	}
-	return (1);
 }

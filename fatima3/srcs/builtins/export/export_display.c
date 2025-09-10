@@ -53,7 +53,7 @@ void	print_export_line(char *entry)
 
 static void	print_env_filtered(char **copy_env)
 {
-	int i;
+	int	i;
 
 	i = 0;
 	while (copy_env[i])

@@ -15,12 +15,12 @@
 int			is_valid_var_name(char *argv);
 int			is_same_var_name(const char *entry, const char *var);
 int			count_str_array(char **array);
-int 		count_export_only(char **envp, char **export);
+int			count_export_only(char **envp, char **export);
 void		sort_envp(char **envp);
 
 int	count_str_array(char **array)
 {
-	int i;
+	int	i;
 
 	i = 0;
 	while (array && array[i])
@@ -28,7 +28,7 @@ int	count_str_array(char **array)
 	return (i);
 }
 
-int count_export_only(char **envp, char **export)
+int	count_export_only(char **envp, char **export)
 {
 	int	count;
 	int	i;
