@@ -40,7 +40,6 @@ static int	execute_pipeline_commands(t_command *commands, t_struct *mini,
 	int	result;
 
 	result = execute_pipeline(commands, mini, child_pids, num_commands);
-	free(child_pids);
 	return (result);
 }
 
@@ -67,5 +66,6 @@ int	execute_commands(t_command *commands, t_struct *mini)
 					num_commands);
 	}
 	set_signals(INTERACTIVE);
+	free(child_pids);
 	return (result);
 }
