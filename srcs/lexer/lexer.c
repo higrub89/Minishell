@@ -56,8 +56,8 @@ static t_token	*lexer_loop(t_lexer_ctx *ctx)
 		if (ctx->input[i] == '&' || ctx->input[i] == ';' || ctx->input[i] == '('
 			|| ctx->input[i] == ')')
 		{
-			if (!lexer_syntax_error(ctx->input[i], ctx->mini, *(ctx->head)))
-				return (NULL);
+			lexer_syntax_error(ctx->input[i], ctx->mini, *(ctx->head));
+			return (NULL);
 		}
 		i = lexer_process_token(ctx, i);
 		if (!lexer_handle_result(i, ctx->mini, *(ctx->head)))

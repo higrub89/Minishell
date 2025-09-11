@@ -32,7 +32,12 @@ void	process_arg(char *arg, t_struct *mini, t_list **new_args_list)
 	if (!was_quoted && ft_strchr(expanded_str, ' '))
 		split_and_add_args(expanded_str, new_args_list);
 	else
-		ft_lstadd_back(new_args_list, ft_lstnew(expanded_str));
+	{
+		if (was_quoted || ft_strlen(expanded_str) > 0)
+			ft_lstadd_back(new_args_list, ft_lstnew(expanded_str));
+		else
+			free(expanded_str);
+	}
 }
 
 void	expand_command_args(t_command *cmd, t_struct *mini)
@@ -76,11 +81,17 @@ void	expand_command_redirections(t_command *cmd, t_struct *mini)
 	redir = cmd->redirections;
 	while (redir)
 	{
-		expanded_str = expand_and_remove_quotes(redir->file, mini);
-		if (expanded_str)
+		if (redir->type == REDIR_HEREDOC)
 		{
-			free(redir->file);
-			redir->file = expanded_str;
+		}
+		else
+		{
+			expanded_str = expand_and_remove_quotes(redir->file, mini);
+			if (expanded_str)
+			{
+				free(redir->file);
+				redir->file = expanded_str;
+			}
 		}
 		redir = redir->next;
 	}

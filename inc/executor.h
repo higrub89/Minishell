@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   executor.h                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
+/*   By: rhiguita <rhiguita@student.42madrid.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/03 05:03:55 by rhiguita          #+#    #+#             */
-/*   Updated: 2025/09/03 05:03:58 by rhiguita         ###   ########.fr       */
+/*   Updated: 2025/09/11 23:49:43 by rhiguita         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,7 @@ typedef struct s_exec_data
 }				t_exec_data;
 
 // executor.c
+void			print_heredoc_warning(t_redirection *redir);
 pid_t			create_pipe_and_fork(t_command *cmd, int pipe_fd[2]);
 int				execute_commands(t_command *commands, t_struct *mini);
 void			child_process(t_command *cmd, int pipe_fd[2], int prev_fd,
@@ -39,6 +40,18 @@ void			child_process(t_command *cmd, int pipe_fd[2], int prev_fd,
 void			parent_process(t_command *cmd, t_exec_data *d);
 int				execute_pipeline(t_command *cmds, t_struct *mini,
 					pid_t *child_pids, int num_commands);
+int				process_heredoc_line(t_redirection *redir, t_struct *mini,
+					int pipe_write_fd);								
+
+// process_heredoc.c
+int				handle_single_heredocs(t_command *cmd, t_redirection *redir,
+					t_struct *mini);
+int				heredoc_parent(t_command *cmd, t_struct *mini, int *pipe_fds,
+					pid_t pid);
+void			heredoc_child(t_redirection *redir, t_struct *mini,
+					int *pipe_fds);
+int				fill_heredoc_pipe(t_redirection *redir, t_struct *mini,
+					int write_fd);
 
 // pipeline_utils.c
 void			parent_cleanup(t_command *cmd, t_exec_data *d);
@@ -63,9 +76,7 @@ int				process_redirections(t_command *cmd, int *last_in_fd,
 int				handle_redirections_in_child(t_command *cmd);
 void			close_heredoc(t_command *cmd);
 void			restore_fds(int stdin_fd, int stdout_fd);
-void			print_heredoc_warning(t_redirection *redir);
-int				process_heredoc_line(t_redirection *redir, t_struct *mini,
-					int pipe_write_fd);
+
 int				read_heredoc_input(t_redirection *redir, t_struct *mini);
 
 // cmd_utils.c
@@ -82,5 +93,9 @@ void			execute_external_command(t_command *cmd, t_struct *mini);
 int				handle_single_builtin(t_command *cmd, t_struct *mini);
 int				is_builtin(char *cmd_name);
 int				execute_builtin(t_command *cmd, t_struct *mini);
+
+// executor_utils.c
+int				execute_pipeline(t_command *cmds, t_struct *mini,
+					pid_t *child_pids, int num_commands);
 
 #endif

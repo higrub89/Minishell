@@ -1,24 +1,20 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   main_utils.h                                       :+:      :+:    :+:   */
+/*   singleton.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/09/03 23:03:12 by rhiguita          #+#    #+#             */
-/*   Updated: 2025/09/03 23:03:15 by rhiguita         ###   ########.fr       */
+/*   Created: 2025/09/11 22:01:58 by rhiguita          #+#    #+#             */
+/*   Updated: 2025/09/11 22:02:00 by rhiguita         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#ifndef MAIN_UTILS_H
-# define MAIN_UTILS_H
+#include "../../inc/minishell.h"
 
-# include "minishell.h"
+t_struct	*get_mini(void)
+{
+	static t_struct	mini;
 
-void	manage_shlvl(t_struct *mini);
-void	handle_underscore(t_struct *mini, char *arg);
-void	cleanup_minishell(t_struct *mini);
-void	clean_and_exit(t_struct *mini, int status);
-int		ft_str_is_whitespace(const char *s);
-
-#endif
+	return (&mini);
+}

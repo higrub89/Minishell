@@ -13,11 +13,11 @@
 #ifndef MINISHELL_H
 # define MINISHELL_H
 
+# include "../libft/inc/libft.h"
 # include <readline/history.h>
 # include <readline/readline.h>
 # include <signal.h>
 # include <stdbool.h>
-# include "../libft/inc/libft.h"
 
 typedef enum e_token_type
 {
@@ -71,6 +71,8 @@ typedef struct s_minishell
 	char					**envp;
 	int						last_exit_status;
 	bool					should_exit;
+	bool					is_piped;
+	bool					child_interrupted_by_signal;
 }							t_struct;
 
 typedef enum e_mode
@@ -81,5 +83,14 @@ typedef enum e_mode
 }							t_mode;
 
 void						set_signals(t_mode mode);
+int							ft_str_is_whitespace(const char *s);
+int							handle_empty_env(t_struct *mini, char *arg);
+void						run_minishell_loop(t_struct *mini);
+int							init_minishell(t_struct *mini, char **envp_main,
+								char *arg);
+int							process_input(char *input, t_token **tokens,
+								t_command **cmds, t_struct *mini);
+
+t_struct					*get_mini(void);
 
 #endif

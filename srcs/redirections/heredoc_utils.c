@@ -13,39 +13,17 @@
 #include "../inc/expander.h"
 #include "../inc/redirection.h"
 
-static volatile sig_atomic_t	g_last_signal = 0;
+static volatile sig_atomic_t	*get_signal_flag(void)
+{
+	static volatile sig_atomic_t	signal_flag = 0;
+
+	return (&signal_flag);
+}
 
 void	handle_sigint_heredoc(int sig)
 {
 	(void)sig;
-	g_last_signal = 1;
-}
-
-char	*get_expanded_line(char *line, t_redirection *heredoc,
-		t_struct *mini)
-{
-	char	*expanded_line;
-
-	if (heredoc->expand_heredoc_content)
-		expanded_line = expand_heredoc_line(line, mini);
-	else
-		expanded_line = ft_strdup(line);
-	free(line);
-	return (expanded_line);
-}
-
-int	write_heredoc_line(char *expanded_line, int pipe_fd, t_struct *mini)
-{
-	if (!expanded_line)
-	{
-		perror("minishell: malloc failed during heredoc expansion");
-		mini->last_exit_status = 1;
-		return (1);
-	}
-	write(pipe_fd, expanded_line, ft_strlen(expanded_line));
-	write(pipe_fd, "\n", 1);
-	free(expanded_line);
-	return (0);
+	*get_signal_flag() = 1;
 }
 
 int	heredoc_loop(t_redirection *heredoc, int pipe_fd, t_struct *mini)
@@ -55,7 +33,7 @@ int	heredoc_loop(t_redirection *heredoc, int pipe_fd, t_struct *mini)
 	while (1)
 	{
 		line = readline("> ");
-		if (g_last_signal)
+		if (*get_signal_flag())
 		{
 			free(line);
 			mini->last_exit_status = 130;
@@ -82,16 +60,17 @@ int	handle_single_heredoc(t_redirection *redir, int *heredoc_fd, t_struct *mini)
 	int	pipe_fd[2];
 
 	signal(SIGINT, handle_sigint_heredoc);
-	g_last_signal = 0;
+	*get_signal_flag() = 0;
 	if (pipe(pipe_fd) == -1)
 		return (perror("minishell: pipe"), 1);
 	if (heredoc_loop(redir, pipe_fd[1], mini))
 	{
 		close(pipe_fd[0]);
 		close(pipe_fd[1]);
+		set_signals(INTERACTIVE);
 		return (1);
 	}
-	signal(SIGINT, SIG_DFL);
+	set_signals(INTERACTIVE);
 	close(pipe_fd[1]);
 	if (*heredoc_fd != -1)
 		close(*heredoc_fd);

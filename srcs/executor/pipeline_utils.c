@@ -38,7 +38,8 @@ static void	handle_child_status(t_command *cmd, int status, t_struct *mini,
 	if (WIFEXITED(status))
 	{
 		mini->last_exit_status = WEXITSTATUS(status);
-		if (WEXITSTATUS(status) == 127 && cmd && cmd->args[0])
+		if (WEXITSTATUS(status) == 127 && cmd && cmd->args[0]
+			&& cmd->args[0][0] != '\0')
 		{
 			ft_putstr_fd("minishell: ", STDERR_FILENO);
 			ft_putstr_fd(cmd->args[0], STDERR_FILENO);
@@ -46,13 +47,20 @@ static void	handle_child_status(t_command *cmd, int status, t_struct *mini,
 		}
 	}
 	else if (WIFSIGNALED(status))
+	{
 		mini->last_exit_status = 128 + WTERMSIG(status);
+		if (WTERMSIG(status) == SIGINT)
+		{
+			mini->child_interrupted_by_signal = true;
+			ft_putstr_fd("\n", STDOUT_FILENO);
+		}
+	}
 	if (!is_last)
 		mini->last_exit_status = 0;
 }
 
-void	wait_for_children(t_command *cmds, pid_t *child_pids,
-		int num_commands, t_struct *mini)
+void	wait_for_children(t_command *cmds, pid_t *child_pids, int num_commands,
+		t_struct *mini)
 {
 	int			status;
 	int			i;

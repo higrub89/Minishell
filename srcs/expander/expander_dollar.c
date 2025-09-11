@@ -68,6 +68,11 @@ void	process_dollar_expansion(t_expansion_context *ctx, t_struct *mini,
 		(*(ctx->i))++;
 		return ;
 	}
+	if (ctx->s[*(ctx->i) + 1] == '\'' || ctx->s[*(ctx->i) + 1] == '"')
+	{
+		(*(ctx->i))++;
+		return ;
+	}
 	if (ctx->s[*(ctx->i) + 1] == '?' || ft_isdigit(ctx->s[*(ctx->i) + 1]))
 		handle_special_dollar(ctx, mini);
 	else if (ft_isalpha(ctx->s[*(ctx->i) + 1]) || ctx->s[*(ctx->i) + 1] == '_')
@@ -80,7 +85,7 @@ void	process_dollar_expansion(t_expansion_context *ctx, t_struct *mini,
 }
 
 char	*extract_and_get_value(const char *s, int *start_of_var_idx,
-		t_struct *mini)
+			t_struct *mini)
 {
 	int		temp_i;
 	char	*var_name;
@@ -99,7 +104,7 @@ char	*extract_and_get_value(const char *s, int *start_of_var_idx,
 }
 
 void	init_expansion_ctx(t_expansion_context *ctx, t_string_builder *sb,
-		const char *s, int *i)
+			const char *s, int *i)
 {
 	ctx->sb = sb;
 	ctx->s = s;

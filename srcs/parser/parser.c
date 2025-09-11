@@ -3,17 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   parser.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: rhiguita <rhiguita@student.42madrid.com>   +#+  +:+       +#+        */
+/*   By: fatigarc <fatigarc@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/09/03 02:16:59 by rhiguita          #+#    #+#             */
-/*   Updated: 2025/09/03 02:17:02 by rhiguita         ###   ########.fr       */
+/*   Updated: 2025/09/07 11:46:20 by fatigarc         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../inc/parser.h"
 
-t_token	*process_redirection(t_token *tok, t_command *cmd,
-		t_struct *mini)
+t_token	*process_redirection(t_token *tok, t_command *cmd, t_struct *mini)
 {
 	t_redirection	*new_redir;
 	t_redir_type	type;
@@ -39,8 +38,8 @@ t_token	*process_redirection(t_token *tok, t_command *cmd,
 	return (tok->next->next);
 }
 
-t_token	*handle_pipe(t_command **cmd, t_token *tok,
-	t_struct *mini, t_command *head)
+t_token	*handle_pipe(t_command **cmd, t_token *tok, t_struct *mini,
+		t_command *head)
 {
 	if ((*cmd)->num_args == 0 && (*cmd)->num_redirections == 0)
 		return (free_commands(head), set_syntax_error("|", mini));
@@ -60,16 +59,15 @@ t_token	*handle_pipe(t_command **cmd, t_token *tok,
 	return (tok);
 }
 
-t_command	*finalize_cmds(t_command *head, t_command *curr,
-	t_struct *mini)
+t_command	*finalize_cmds(t_command *head, t_command *curr, t_struct *mini)
 {
 	if (curr->num_args == 0 && curr->num_redirections == 0)
 		return (free_commands(head), set_syntax_error("newline", mini));
 	return (head);
 }
 
-t_token	*dispatch_token(t_token *tok, t_command **curr,
-	t_struct *mini, t_command *head)
+t_token	*dispatch_token(t_token *tok, t_command **curr, t_struct *mini,
+		t_command *head)
 {
 	if (tok->type == WORD)
 	{
@@ -92,7 +90,6 @@ t_command	*parse_input(t_token *token_list, t_struct *mini)
 
 	if (!token_list)
 		return (NULL);
-	mini->last_exit_status = 0;
 	cmd_head = create_command_node();
 	if (!cmd_head)
 		return (NULL);
@@ -103,8 +100,6 @@ t_command	*parse_input(t_token *token_list, t_struct *mini)
 	while (tok)
 	{
 		tok = dispatch_token(tok, &current_cmd, mini, cmd_head);
-		if (mini->last_exit_status == 258)
-			return (free_commands(cmd_head), NULL);
 	}
 	return (finalize_cmds(cmd_head, current_cmd, mini));
 }
