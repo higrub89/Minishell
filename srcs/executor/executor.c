@@ -29,7 +29,8 @@ static int	handle_initial_checks(t_command *commands, t_struct *mini)
 
 static int	execute_single_command(t_command *commands, t_struct *mini)
 {
-	if (commands->args && commands->args[0] && is_builtin(commands->args[0]))
+	if (!commands->next && commands->args && commands->args[0]
+		&& is_builtin(commands->args[0]))
 		return (handle_single_builtin(commands, mini));
 	return (-1);
 }
